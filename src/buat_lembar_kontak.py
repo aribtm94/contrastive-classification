@@ -1,7 +1,14 @@
 """
+Jalankan: python src/buat_lembar_kontak.py
+
 Lembar kontak: 1215 crop jadi 18 halaman (satu per gambar sumber).
-Tiap petak diberi nomor det_id besar supaya mudah dicatat.
+Tiap petak diberi nomor global 0001..1215 - nomor itu sama dengan nama
+berkas crop-nya dan sama dengan kolom 'nomor' di lembar_label.csv, jadi
+apa yang dibaca di layar bisa langsung dicatat tanpa menerjemahkan apa pun.
 Crop yang sudah diketahui mati diberi bingkai supaya tidak perlu dicek lagi.
+
+Nama berkas halaman diawali urutan (01_, 02_, ...) supaya di penjelajah
+berkas halaman tersusun sama dengan arah naiknya nomor crop.
 """
 import csv, io, os, math, collections
 import cv2, numpy as np
@@ -16,10 +23,11 @@ rows = list(csv.DictReader(io.open("data/label_chick/lembar_label.csv",
                                    encoding="utf-8")))
 per = collections.defaultdict(list)
 for r in rows:
-    per[r["gambar_sumber"]].append(r)
+    per[int(r["halaman"])].append(r)
 
-for nama in sorted(per):
-    item = sorted(per[nama], key=lambda r: int(r["det_id"]))
+for hal in sorted(per):
+    item = sorted(per[hal], key=lambda r: int(r["nomor"]))
+    nama = item[0]["gambar_sumber"]
     n = len(item)
     baris = math.ceil(n / KOL)
     H = baris * (PETAK + PAD) + 46
@@ -32,9 +40,11 @@ for nama in sorted(per):
         _oy = 46 + _y * (PETAK + PAD); _ox = _x * PETAK
         kanvas[_oy + PAD - 2:_oy + PAD + PETAK - 2, _ox + 2:_ox + PETAK - 2] = 205
 
-    cv2.putText(kanvas, "%s  -  %d crop  (bingkai = sudah diketahui MATI)"
-                % (nama, n), (8, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.62,
-                (20, 20, 20), 2, cv2.LINE_AA)
+    cv2.putText(kanvas, "%s  -  nomor %s sampai %s  (%d crop, bingkai = sudah "
+                "diketahui MATI)" % (nama, item[0]["berkas"][:4],
+                                     item[-1]["berkas"][:4], n),
+                (8, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (20, 20, 20), 2,
+                cv2.LINE_AA)
 
     for i, r in enumerate(item):
         y, x = divmod(i, KOL)
@@ -55,12 +65,15 @@ for nama in sorted(per):
         tebal = 3 if mati else 1
         cv2.rectangle(kanvas, (ox + 2, oy + PAD - 2),
                       (ox + PETAK - 2, oy + PAD + PETAK - 2), warna, tebal)
-        tulis = "%s%s" % (r["det_id"], " MATI" if mati else "")
+        # nomor global, bukan det_id - ini yang dicatat saat melabeli
+        tulis = "%04d%s" % (int(r["nomor"]), " MATI" if mati else "")
         cv2.putText(kanvas, tulis, (ox + 5, oy + PAD - 7),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.52, warna, 2, cv2.LINE_AA)
 
-    out = os.path.join(KELUAR, "%s.jpg" % os.path.splitext(nama)[0])
+    out = os.path.join(KELUAR, "%02d_%s.jpg" % (hal, os.path.splitext(nama)[0]))
     cv2.imwrite(out, kanvas, [cv2.IMWRITE_JPEG_QUALITY, 92])
-    print("  %-18s %3d crop -> %s" % (nama, n, os.path.basename(out)))
+    print("  hal %2d  %-18s %3d crop  %s-%s -> %s"
+          % (hal, nama, n, item[0]["berkas"][:4], item[-1]["berkas"][:4],
+             os.path.basename(out)))
 
 print("\nlembar kontak:", KELUAR)

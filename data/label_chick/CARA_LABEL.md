@@ -8,22 +8,28 @@ ketajaman - lihat `outputs/reports/kronologi_lengkap.md` babak 10 dan 11.
 
 | berkas | isi |
 |---|---|
-| `crops/` | 1215 crop, nama `<gambar>_det<NNN>.jpg` |
-| `lembar_kontak/` | 18 halaman, satu per gambar sumber - **mulai dari sini** |
+| `crops/` | 1215 crop, nama `0001.jpg` sampai `1215.jpg` |
+| `lembar_kontak/` | 18 halaman, `01_...` sampai `18_...` - **mulai dari sini** |
 | `lembar_label.csv` | daftar 1215 baris, kolom `label` menunggu diisi |
+
+Nomornya **berjalan terus 1 sampai 1215** menembus batas gambar sumber, jadi
+satu nomor cukup untuk menunjuk satu crop - tidak perlu menyebut gambarnya.
+Nomor yang tercetak di petak = nama berkas crop = kolom `nomor` di CSV.
 
 ## Langkahnya
 
-1. Buka `lembar_kontak/`, satu halaman per gambar. Tiap petak ada **nomornya**
-   (itu `det_id`), dan petak berdasar abu menunjukkan batas crop - kalau
-   ayamnya tidak memenuhi petak, crop-nya memang terpotong.
+1. Buka `lembar_kontak/` berurutan dari `01_` sampai `18_`; halaman 1 memuat
+   nomor 0001-0080, halaman 2 lanjut 0081-0143, begitu seterusnya sampai 1215.
+   Tiap petak ada **nomornya**, dan petak berdasar abu menunjukkan batas crop -
+   kalau ayamnya tidak memenuhi petak, crop-nya memang terpotong.
 
 2. **Yang berbingkai merah bertulis MATI sudah diketahui** - 22 crop yang
    cocok dengan mask acuan (IoU >= 0.5). Tidak perlu dicek ulang, tapi
    **boleh dikoreksi** kalau menurut Anda keliru.
 
-3. Catat nomor yang **mati** dan yang **bukan ayam** saja. Sisanya otomatis
-   dianggap hidup, sesuai keputusan Anda.
+3. Catat nomor yang **mati** dan yang **bukan ayam** saja - cukup angkanya,
+   misal `1060, 1069, 1071`. Sisanya otomatis dianggap hidup, sesuai
+   keputusan Anda.
 
 4. Isi kolom `label` di `lembar_label.csv` dengan salah satu:
 
@@ -33,8 +39,12 @@ ketajaman - lihat `outputs/reports/kronologi_lengkap.md` babak 10 dan 11.
    | `bukan` | bukan ayam utuh: terpotong, tumpang-tindih, alat, lantai |
    | *(kosong)* | ayam hidup - tidak perlu diisi |
 
+   Barisnya sudah urut nomor, jadi baris ke-N di CSV = crop nomor N.
+
    Kolom `dugaan_awal` biarkan apa adanya; itu catatan asal-usul 22 crop acuan,
-   berguna untuk memeriksa apakah mask acuan sendiri ada yang salah.
+   berguna untuk memeriksa apakah mask acuan sendiri ada yang salah. Kolom
+   `gambar_sumber` dan `det_id` juga jangan diubah - itu tali yang menyambungkan
+   tiap crop ke `detections.json` dan ke bbox yang dinilai `eval_on_chick.py`.
 
 ## Yang penting diperhatikan
 
