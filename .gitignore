@@ -61,3 +61,7 @@ data/label_chick/crops/
 # salinan crop 'bukan ayam' untuk cek ulang - bisa dibuat ulang:
 #   python src/terapkan_label.py
 data/label_chick/cek_ulang/bukan/
+
+# Peta jalan lintas sesi/agen - bebas diubah, bukan bagian hasil.
+# Laporan resminya ada di outputs/reports/kronologi_lengkap.md
+tujuan.md
