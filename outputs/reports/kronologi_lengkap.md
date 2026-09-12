@@ -38,7 +38,7 @@ istilah teknis.
 | [11](#11-babak-11-membandingkan-dengan-acuan-yang-benar) | Acuan yang benar | tidak ada yang menang |
 | [12](#12-kumpulan-masalah-yang-ditemukan) | Daftar masalah | 11 masalah + statusnya |
 | [13](#13-daftar-gambar-hasil-eksperimen) | Daftar gambar | 16 figur |
-| [15](#15-menghitung-ulang-semuanya) | Reproduksi | perintah lengkap |
+| [14](#14-menghitung-ulang-semuanya) | Reproduksi | perintah lengkap |
 
 ---
 
@@ -188,7 +188,32 @@ mana yang menyumbang.
 
 ## 3. Babak 3: tiap metode dapat augmentasinya sendiri
 
-Tiap metode diberi kebijakan augmentasi **dari paper aslinya**:
+### Kenapa augmentasi justru jadi jantung eksperimen ini
+
+Pada klasifikasi biasa, augmentasi cuma pelengkap - penambah variasi supaya
+model tidak menghafal. Pada metode kontrastif, augmentasi **adalah definisi
+soalnya**. Model kontrastif dilatih dengan satu perintah: *dua potongan yang
+berasal dari gambar yang sama harus berdekatan di ruang ciri, yang dari gambar
+berbeda harus berjauhan*. Jadi apa pun yang diubah oleh augmentasi, model
+diperintahkan untuk **mengabaikannya**; apa pun yang tidak pernah diubah, model
+dibiarkan **bergantung padanya**.
+
+> **Perumpamaan.** Bayangkan melatih petugas pos mengenali rumah pelanggan.
+> Kalau setiap hari Anda tunjukkan rumah itu pada cuaca berbeda, jam berbeda,
+> dan dari sudut berbeda, dia terpaksa menghafal **bentuk rumahnya**. Tapi kalau
+> Anda selalu memotretnya siang cerah dari depan, dia bisa lulus cuma dengan
+> menghafal 'rumah yang fotonya terang' - dan langsung tersesat saat hujan.
+> Augmentasi adalah daftar hal yang kita **paksa** dia abaikan.
+
+Itulah sebabnya pemilihan augmentasi di sini bukan perkara selera. Kalau
+ketajaman gambar tidak pernah diganggu augmentasi, model boleh memakai
+ketajaman sebagai jawaban - dan babak 4 akan menunjukkan bahwa itu persis yang
+terjadi.
+
+### Pilihannya: augmentasi dari paper masing-masing
+
+Tiap metode diberi kebijakan augmentasi **dari paper aslinya**, bukan satu
+kebijakan seragam bikinan sendiri:
 
 | Metode | Augmentasi | Paper sumber |
 |---|---|---|
@@ -196,22 +221,161 @@ Tiap metode diberi kebijakan augmentasi **dari paper aslinya**:
 | `supcon` | `stacked_randaug` | Khosla dkk., NeurIPS 2020 |
 | `ce` | `hier_addone` | Zhang & Ma, CVPR 2022 |
 
+*Kenapa dari paper, bukan diseragamkan:* kalau ketiganya dipaksa memakai
+augmentasi yang sama, yang dibandingkan bukan lagi "metode Chen vs metode
+Khosla vs metode Zhang", melainkan "tiga fungsi loss di bawah resep orang
+keempat". Tiap paper **menyetel** augmentasinya bersama loss-nya; memisahkan
+keduanya berarti melaporkan metode yang tidak pernah diusulkan siapa pun.
+Harganya dibayar di bagian berikut - perbandingannya jadi 2 faktor.
+
+### Alasan tiap kebijakan, satu per satu
+
+**A. `simclr` (untuk `selfcon`) - Chen dkk., ICML 2020, Appendix A.**
+
+| Urutan | Operasi | Parameter |
+|---|---|---|
+| 1 | `rrc` (crop acak lalu diperbesar) | p 1.0, skala 0.20-1.00 |
+| 2 | `hflip` | p 0.5 |
+| 3 | `color_jitter` | p 0.8, kekuatan 1.0 |
+| 4 | `gray` | p 0.2 |
+| 5 | `blur` Gaussian | p 0.5, kernel 10% sisi, sigma 0.1-2.0 |
+
+*Kenapa urutan dan parameter ini:* Gambar 5 paper Chen menguji setiap pasangan
+operasi, dan pasangan **crop + distorsi warna** adalah yang terkuat - sendirian
+menambah 23,2 poin di atas crop saja. Alasannya halus: kalau cuma di-crop, dua
+potongan dari gambar yang sama masih punya **histogram warna yang nyaris
+identik**, jadi model bisa mencocokkan keduanya lewat warna mentah tanpa pernah
+melihat isinya. Distorsi warna menutup pintu itu.
+
+*Yang paling penting untuk proyek ini:* kernel blur-nya ditetapkan **10% dari
+sisi gambar** - pada 224 px itu 23 px, bukan 3-5 px. Inilah satu-satunya
+kebijakan yang menyerang ketajaman secara serius, dan di babak 4 ia jadi
+satu-satunya konfigurasi yang lolos dari lantai ketajaman.
+
+> **Perumpamaan.** Seperti menguji apakah seseorang benar-benar mengenali wajah
+> temannya: fotonya dipotong sebagian, warnanya digeser, lalu dikaburkan. Kalau
+> dia masih bisa, dia memang mengenali wajahnya. Kalau dia cuma hafal "fotonya
+> tajam dan kemerahan", dia gagal begitu salah satu dicabut.
+
+**B. `stacked_randaug` (untuk `supcon`) - Khosla dkk., NeurIPS 2020.**
+
+| Urutan | Operasi | Parameter |
+|---|---|---|
+| 1 | `rrc` | p 1.0, skala 0.20-1.00 |
+| 2 | `hflip` | p 0.5 |
+| 3 | `randaug` ditumpuk | n 2, magnitude 9, dijalankan 2x |
+
+*Kenapa begini:* paper SupCon **tidak mendefinisikan augmentasinya sendiri**. Ia
+membandingkan empat resep yang sudah ada - AutoAugment, RandAugment,
+SimAugment, Stacked RandAugment - dan melaporkan yang terakhir paling baik untuk
+ResNet dalam. Jadi yang dipakai di sini adalah pilihan paper, bukan karangan
+saya. "Stacked" artinya rangkaian 2 operasi acak dijalankan **dua kali
+berurutan**, sehingga satu gambar bisa kena 4 operasi bertumpuk.
+
+*Keputusan yang sengaja diambil:* kebijakan ini **tidak memakai Gaussian blur**,
+karena blur memang bukan bagian dari RandAugment. Ini dibiarkan apa adanya - dan
+bukan kelalaian, justru berguna: ia menjadi pembanding langsung "ada blur vs
+tidak ada blur" di tabel kebocoran babak 4. Dua kebijakan dengan crop dan warna
+yang mirip, beda utamanya blur, memberi bukti bahwa blur-lah yang mematikan
+jalan pintas ketajaman.
+
+**C. `hier_addone` (untuk `ce`) - Zhang & Ma, CVPR 2022.**
+
+| Tingkat | Operasi | Parameter |
+|---|---|---|
+| t0 (selalu) | `rrc` | p 1.0, skala 0.20-1.00 |
+| t1 | `color_jitter` | p 0.8, kekuatan 1.0 |
+| t2 | `gray` | p 0.2 |
+| t3 | `blur` | p 0.5, kernel 10% sisi |
+| t4 | `hflip` | p 0.5 |
+
+*Kenapa urutannya persis begitu:* di paper Zhang & Ma, urutan penambahan
+operasi **bukan hal bebas** - urutan inilah yang menang, 67,1 berbanding 64,5
+untuk urutan terburuk. Jadi urutannya disalin apa adanya.
+
+*Kenapa `level_sampling: true`:* ini meniru "expanded views" paper. Tiap sampel
+memakai subset operasi T_i dengan i diambil acak seragam dari {1..4}. Akibatnya
+sebagian pasangan cuma beda crop+warna (invariansi yang diminta lemah) dan
+sebagian beda penuh sampai flip (invariansi kuat) - kesulitannya bertingkat,
+bukan satu tingkat saja.
+
+> **Perumpamaan.** Seperti latihan bertahap, bukan langsung ujian akhir: hari
+> pertama soalnya cuma sedikit berubah, hari keempat berubah semuanya. Model
+> bertemu pasangan mudah dan pasangan sulit dalam satu batch yang sama.
+
+*Batasan yang diakui terbuka:* **tiga** bagian metode Zhang & Ma tidak
+diimplementasikan - loss multi-tahap 4-tap, 8 view, dan augmentation-parameter
+embedding. Ketiganya mengubah **arsitektur**, sedangkan syarat perbandingan ini
+adalah arsitektur identik untuk ketiga metode. Yang dipakai karena itu hanya
+**modul augmentasinya**. Menyebut ini "metode Zhang & Ma" tanpa catatan
+tersebut adalah klaim yang tidak benar, jadi catatannya ikut ditulis di laporan
+dan di komentar `configs/config.yaml`.
+
+### Dua kebijakan pembanding yang ikut disimpan
+
+| Kebijakan | Isi | Gunanya |
+|---|---|---|
+| `minimal` | `hflip` saja | dasar "hampir tanpa augmentasi"; juga dipakai tahap probe |
+| `legacy` | flip + rrc_iso + terang/kontras + hsv + gray + blur k=3/5 | perilaku versi lama kode, disimpan sebagai pembanding |
+
+*Kenapa `legacy` tidak dibuang:* ia bukti angka. Blur-nya cuma kernel 3-5 px,
+dan dengan itu **AUC ketajaman masih 0.851** - artinya jalan pintas ketajaman
+masih terbuka lebar. Membandingkannya dengan `simclr` (kernel 23 px)
+menunjukkan bahwa yang menentukan bukan "ada blur atau tidak", tapi **seberapa
+besar** blurnya.
+
+> **Perumpamaan.** Memakai kasa nyamuk untuk menyaring pasir. Bukan salah
+> "tidak ada saringan" - saringannya ada, lubangnya saja terlalu besar.
+
+### Perubahan augmentasi yang diambil sepanjang eksperimen
+
+Urut sesuai waktu kejadiannya:
+
+| # | Perubahan | Kenapa | Akibatnya |
+|---|---|---|---|
+| 1 | Rotasi & shear **dibuang** dari kolam RandAugment | Mati-vs-hidup sebagian adalah soal **pose/orientasi**. Memutar crop ayam hidup bisa membuatnya menyerupai ayam terjatuh - itu merusak label, bukan menambah variasi | kolam op RandAugment tinggal **11 op** (identitas, translasi X/Y, terang, warna, kontras, ketajaman, posterize, solarize, autocontrast, equalize) - semuanya fotometrik atau pergeseran, tidak ada yang memutar |
+| 2 | Blur diperkuat: kernel tetap 3-5 px -> **10% sisi gambar** (23 px pada 224) | `legacy` dengan k=3/5 masih menyisakan AUC ketajaman 0.851 - saringannya terlalu longgar | satu-satunya perubahan augmentasi yang benar-benar menjatuhkan jalan pintas ketajaman |
+| 3 | Dijalankan **seluruh grid 3x3** (`--grid full`), bukan cuma diagonal | diagonal mencampur loss dan augmentasi (lihat di bawah) | augmentasi bisa ditahan sementara loss divariasikan |
+| 4 | Tahap probe **dikunci** ke `minimal` untuk `selfcon`/`supcon` | probe mengukur mutu encoder, bukan mutu augmentasi probe | satu efek lebih sedikit yang tercampur |
+| 5 | Resolusi disamakan **sebelum** letterbox (`equalize_resolution`, 48 px) | muncul di babak 8: ketajaman ternyata penanda **domain**, dan augmentasi saja tidak cukup menghapusnya | AUC jalan pintas ketajaman di PIO jatuh 0.8596 -> 0.5806 |
+
+Catatan penting untuk nomor 1: **ketiga paper sumber justru memakai
+rotasi/shear.** Jadi ini satu-satunya tempat di mana saya sengaja menyimpang
+dari paper, dan alasannya khas dataset ini - di ImageNet, kucing terbalik tetap
+kucing, tapi di sini ayam terbalik **berubah label**. Penyimpangan ini ditulis
+di `src/dataset.py` baris 44-48 supaya tidak terlihat seperti kelalaian.
+
+Perubahan 1, 2, dan 5 semuanya lahir dari satu temuan yang sama: **augmentasi
+menentukan jalan pintas mana yang masih terbuka.** Nomor 5 khususnya penting
+karena ia mengakui batas augmentasi - ada kebocoran yang harus ditutup di
+tahap praproses, bukan di tahap augmentasi.
+
+> **Perumpamaan untuk nomor 1.** Kalau soal ujiannya 'orang ini berdiri atau
+> berbaring', jangan memutar fotonya 90 derajat lalu tetap memakai kunci
+> jawaban yang lama. Bukan soalnya jadi lebih sulit - kunci jawabannya jadi
+> salah.
+
+### Gambar tiap kebijakan
+
 ![tiga kebijakan augmentasi berdampingan](aug/policies_side_by_side.jpg)
 
-*Satu ayam yang sama, diaugmentasi oleh tiga kebijakan berbeda.*
+*Satu ayam yang sama, diaugmentasi oleh tiga kebijakan berbeda. Kolom inilah
+yang menentukan ciri apa yang boleh dipakai model - bukan fungsi loss-nya.*
 
 ![view simclr](aug/simclr.jpg)
 
-*`simclr` - crop acak agresif + warna diubah kuat + blur.*
+*`simclr` - crop acak agresif + warna diubah kuat + blur 23 px. Perhatikan
+bahwa **ketajamannya hilang**; inilah satu-satunya kebijakan yang lolos lantai.*
 
 ![view stacked_randaug](aug/stacked_randaug.jpg)
 
-*`stacked_randaug` - beberapa operasi acak ditumpuk.*
+*`stacked_randaug` - 2 operasi acak dijalankan dua kali. Gambarnya masih
+**tajam**: tanpa Gaussian blur, sesuai RandAugment asli.*
 
 ![view hier_addone](aug/hier_addone.jpg)
 
-*`hier_addone` - menambah satu operasi secara bertingkat.*
-
+*`hier_addone` - operasi ditambah bertingkat t0..t4. Antar-view kekuatannya
+berbeda-beda, karena tingkatnya diundi per sampel.*
 ### Masalah yang langsung muncul: perbandingannya jadi 2 faktor
 
 Kalau `selfcon`+`simclr` dibandingkan dengan `ce`+`hier_addone`, **dua hal
@@ -964,7 +1128,7 @@ Semua ada di `outputs/reports/`.
 
 ---
 
-## 15. Menghitung ulang semuanya
+## 14. Menghitung ulang semuanya
 
 ```bash
 PY="C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/.venv-yolo/Scripts/python.exe"
@@ -1042,7 +1206,7 @@ $PY src/eval_intervensi.py --config configs/config_pio_eq.yaml \
 
 ---
 
-## 16. Laporan terkait
+## 15. Laporan terkait
 
 | berkas | isi |
 |---|---|
