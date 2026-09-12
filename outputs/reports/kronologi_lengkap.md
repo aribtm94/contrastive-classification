@@ -972,7 +972,7 @@ pipeline**, bukan akibat satu keputusan data.
 cukup** memisahkan kedua kelas. Model tidak pernah punya **alasan** untuk
 belajar pose - belajar pose itu mahal, dan tidak ada hadiahnya.
 
-> **Perumpamaan untuk (c) **
+> **Perumpamaan untuk (c).**
 > Murid diberi 130 soal latihan. Dia sadar semua jawaban "A" kebetulan dicetak
 > miring. Dia pakai pola itu, nilainya 95, **dan dia berhenti belajar di situ**
 > - bukan karena bodoh, tapi karena **tidak ada gunanya belajar lebih**.
