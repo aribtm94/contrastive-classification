@@ -57,3 +57,7 @@ src/_train_prefix.bak
 # 1215 crop chick untuk dilabeli manual (6 MB) - dihasilkan ulang
 # dengan: python src/siapkan_label_chick.py
 data/label_chick/crops/
+
+# salinan crop 'bukan ayam' untuk cek ulang - bisa dibuat ulang:
+#   python src/terapkan_label.py
+data/label_chick/cek_ulang/bukan/
