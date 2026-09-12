@@ -4,7 +4,7 @@ Dokumen ini menceritakan **seluruh perjalanan** proyek ini dari permintaan
 pertama sampai temuan terakhir - apa yang dikerjakan, apa yang ditemukan, apa
 yang ternyata salah, dan **kenapa** setiap perubahan diambil.
 
-Ditulis untuk dibaca berurutan, dan untuk dipakai menjelaskan ke dosen. Tiap
+Ditulis untuk dibaca berurutan. Tiap
 bagian penting diberi **perumpamaan** supaya gagasannya bisa disampaikan tanpa
 istilah teknis.
 
@@ -38,7 +38,6 @@ istilah teknis.
 | [11](#11-babak-11-membandingkan-dengan-acuan-yang-benar) | Acuan yang benar | tidak ada yang menang |
 | [12](#12-kumpulan-masalah-yang-ditemukan) | Daftar masalah | 11 masalah + statusnya |
 | [13](#13-daftar-gambar-hasil-eksperimen) | Daftar gambar | 16 figur |
-| [14](#14-cara-menjelaskan-ini-ke-dosen) | Naskah untuk dosen | 5 menit |
 | [15](#15-menghitung-ulang-semuanya) | Reproduksi | perintah lengkap |
 
 ---
@@ -809,7 +808,7 @@ pipeline**, bukan akibat satu keputusan data.
 cukup** memisahkan kedua kelas. Model tidak pernah punya **alasan** untuk
 belajar pose - belajar pose itu mahal, dan tidak ada hadiahnya.
 
-> **Perumpamaan untuk (c) - ini yang paling penting disampaikan ke dosen.**
+> **Perumpamaan untuk (c) **
 > Murid diberi 130 soal latihan. Dia sadar semua jawaban "A" kebetulan dicetak
 > miring. Dia pakai pola itu, nilainya 95, **dan dia berhenti belajar di situ**
 > - bukan karena bodoh, tapi karena **tidak ada gunanya belajar lebih**.
@@ -961,7 +960,7 @@ Semua ada di `outputs/reports/`.
 | [`pio_equalize.jpg`](pio_equalize.jpg) | crop sebelum vs sesudah disamakan | 8 |
 | [`acak_bentuk.jpg`](acak_bentuk.jpg) | **bentuk diacak, AUC tidak bergeming** | 10 |
 
-Empat yang **wajib** ditunjukkan ke dosen ditandai tebal.
+
 
 ---
 
