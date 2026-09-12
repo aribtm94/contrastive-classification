@@ -1,10 +1,9 @@
 # Crop 'ayam mati' - catatan manual.
 # Angka dipisah koma/spasi/baris. Baris berawalan # diabaikan.
 #
-# 297 dan 437 TIDAK ada di sini walaupun keduanya cocok dengan mask acuan
-# (dugaan_awal=mati). Sengaja dibiarkan sesuai catatan Anda; kalau ternyata
-# memang mati, tambahkan nomornya lalu jalankan ulang:
-# python src/terapkan_label.py
+# 297 dan 437 ditambahkan setelah diperiksa ulang: keduanya cocok dengan
+# mask acuan (IoU >= 0.5) dan memang ayam mati. Sekarang 22 acuan mask
+# cocok seluruhnya dengan label manual.
 
-39, 98, 107, 151, 167, 216, 228, 313, 367, 508, 603, 682, 754, 801, 839,
-919, 1010, 1060, 1121, 1188
+39, 98, 107, 151, 167, 216, 228, 297, 313, 367, 437, 508, 603, 682, 754,
+801, 839, 919, 1010, 1060, 1121, 1188
