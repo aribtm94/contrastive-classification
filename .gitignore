@@ -53,3 +53,7 @@ desktop.ini
 # Salinan kerja train.py, bukan bagian hasil
 src/_train_backup.py
 src/_train_prefix.bak
+
+# 1215 crop chick untuk dilabeli manual (6 MB) - dihasilkan ulang
+# dengan: python src/siapkan_label_chick.py
+data/label_chick/crops/
