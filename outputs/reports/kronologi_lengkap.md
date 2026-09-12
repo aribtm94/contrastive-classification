@@ -1215,6 +1215,60 @@ $PY src/eval_intervensi.py --config configs/config_pio_eq.yaml \
 | [`augmentation_report.md`](augmentation_report.md) | 3 kebijakan augmentasi, confound, deviasi paper |
 | [`detection_chick.md`](detection_chick.md) | diagnosis deteksi + saran berdampak |
 | [`pio_saja.md`](pio_saja.md) | percobaan PIO, uji intervensi, vonis akhir |
+| [`same_frame_stage1.md`](same_frame_stage1.md) | Tahap 1 skor relatif satu-frame pada 27 checkpoint |
+| [`same_frame_stage1_causal.md`](same_frame_stage1_causal.md) | gerbang kausal asli vs acak16 |
+
+---
+
+## 16. Babak 12 - Membandingkan ayam dalam frame yang sama
+
+### Gagasan
+
+Alih-alih memberi keputusan absolut pada satu crop, tiap ayam dibandingkan
+dengan pusat robust crop lain dari frame CCTV yang sama. Kamera, pencahayaan,
+jarak, kompresi, dan ketajaman dengan demikian dikontrol oleh konstruksi data.
+Pusat frame dihitung sebagai median koordinat-wise fitur backbone secara
+leave-one-out; crop yang dinilai tidak ikut menentukan pusatnya.
+
+Tahap pertama tidak melatih apa pun. Seluruh 27 checkpoint lama diuji ulang
+pada 943 crop valid: 22 mati dan 921 hidup dari 18 frame. Ambang keputusan
+dipilih nested leave-one-frame-out, dan CI me-resample frame sebagai klaster.
+
+### Hasil
+
+Tidak ada metode yang dipilih dari data uji. Kombinasi `pio_eq48/supcon`
+berguna sebagai contoh paling kuat untuk membaca trade-off hasil:
+
+| scorer | AUC pooled | AUC macro frame | Recall@3 | MRR |
+|---|---:|---:|---:|---:|
+| classifier absolut | 0.741 +/- 0.063 | 0.713 +/- 0.084 | 0.472 +/- 0.028 | 0.469 +/- 0.039 |
+| relatif fitur 512-d | 0.711 +/- 0.077 | **0.759 +/- 0.094** | 0.435 +/- 0.112 | 0.396 +/- 0.039 |
+
+Skor relatif memperbaiki AUC macro pada contoh itu, tetapi tidak mengungguli
+classifier absolut pada AUC pooled, Recall@3, atau MRR. Kombinasi lain juga
+bercampur dan simpangan antar-seed tetap besar. Jadi Tahap 1 memberi sinyal
+yang layak diteruskan, bukan bukti bahwa pendekatan relatif sudah unggul.
+
+### Gerbang kausal
+
+Crop dipecah 4x4 dan petaknya diacak sebelum letterbox, sehingga bentuk global
+hancur tanpa memindahkan padding ke dalam objek. Pada **9 dari 9** kombinasi
+domain/metode, AUC macro skor relatif utama turun; pada 5 kombinasi, CI 95%
+delta seluruhnya di bawah nol. Untuk `pio_eq48/supcon`, delta AUC macro adalah
+**-0.111** dengan CI klaster **[-0.201, -0.023]** dan delta Recall@3 -0.296.
+
+Ini berbeda dari classifier absolut lama yang nyaris tidak berubah saat bentuk
+dihancurkan. Skor relatif sekarang terbukti menggunakan informasi susunan atau
+bentuk, walaupun belum membuktikan bahwa semua sinyal tersebut benar-benar pose
+mati-vs-hidup.
+
+### Keputusan
+
+Tahap 1 **cukup menjanjikan untuk melewati gerbang kausal**, tetapi belum cukup
+untuk langsung mengklaim kemenangan atau melatih ranking loss. Langkah wajib
+berikutnya adalah Tahap 2: classifier biasa yang dilatih pada domain chick
+dengan evaluasi leave-one-frame-out. Kontrol ini menentukan apakah keuntungan
+berasal dari perbandingan relatif atau semata-mata dari data satu-domain.
 
 ---
 
@@ -1242,9 +1296,11 @@ $PY src/eval_intervensi.py --config configs/config_pio_eq.yaml \
 11. Terhadap acuan yang benar, **tidak ada satu pun dari tiga susunan data yang
     terbukti lebih baik** - persis yang diperkirakan kalau tidak ada yang
     membaca bentuk.
+12. Skor anomali relatif satu-frame mulai membaca susunan/bentuk, tetapi belum
+    konsisten mengungguli classifier absolut; berikutnya wajib diuji melawan
+    classifier biasa yang dilatih langsung pada domain chick.
 
-**Langkah berikutnya yang akan bergerak:** bukan loss baru, bukan augmentasi
-baru, bukan penataan ulang data yang sudah ada - melainkan **crop latih yang
-jauh lebih banyak dan beragam, dari banyak kandang dan kamera, dengan kedua
-kelas hadir di tiap kondisi**. Itu butuh anotasi baru, dan tidak ada jalan
-pintas untuk itu.
+**Langkah berikutnya yang akan bergerak:** Tahap 2, yaitu baseline classifier
+domain-chick dengan leave-one-frame-out. Sesudah kontrol itu barulah ranking
+loss satu-frame dapat dinilai secara adil. Batas datanya tetap keras: hanya 22
+ayam mati dari 18 frame, sehingga hasil apa pun harus dibaca sebagai bukti awal.
