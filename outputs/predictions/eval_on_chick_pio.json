@@ -1,0 +1,30 @@
+{
+  "runs_dir": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_alive",
+  "n_images": 18,
+  "results": [
+    {
+      "method": "ce__hier_addone__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.15118430364368993,
+      "p_other": 0.11736452892241271,
+      "auc": 0.5658005029337804
+    },
+    {
+      "method": "selfcon__simclr__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.0939996416087855,
+      "p_other": 0.16472747005463312,
+      "auc": 0.4418197058599405
+    },
+    {
+      "method": "supcon__stacked_randaug__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.3822325656021183,
+      "p_other": 0.22284547663750462,
+      "auc": 0.6422311971348015
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "stats": {
+    "train": {
+      "alive": 20,
+      "dead": 55,
+      "total": 75
+    },
+    "val": {
+      "alive": 5,
+      "dead": 17,
+      "total": 22
+    },
+    "test": {
+      "alive": 7,
+      "dead": 26,
+      "total": 33
+    }
+  },
+  "total_alive": 32,
+  "total_dead": 98,
+  "skipped": {
+    "hidup_kena_ayam_mati": 56,
+    "hidup_terlalu_kecil": 5
+  },
+  "leakage": []
+}

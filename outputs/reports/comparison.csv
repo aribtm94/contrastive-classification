@@ -1,0 +1,13 @@
+aug,method,diagonal,n_seeds,seeds,test_bacc_mean,test_bacc_std,test_tuned_mean,test_tuned_std,test_auc_mean,test_auc_std,test_accuracy,test_recall_dead,test_recall_alive,test_f1_dead,val_bacc_mean,policy_contrastive,policy_head
+hier_addone,selfcon,0,5,42 43 44 45 46,0.7786,0.0986,0.7703,0.1058,0.9363,0.0462,0.8485,0.9,0.6571,0.8931,0.8647,hier_addone,minimal
+hier_addone,supcon,0,5,42 43 44 45 46,0.7511,0.0627,0.8066,0.0657,0.9121,0.0488,0.8546,0.9308,0.5714,0.9043,0.6788,hier_addone,minimal
+hier_addone,ce,1,5,42 43 44 45 46,0.8599,0.094,0.8846,0.0767,0.9605,0.0283,0.9273,0.9769,0.7428,0.9553,0.9941,-,hier_addone
+legacy,selfcon,0,1,42,0.7857,0.0,nan,nan,1.0,0.0,0.9091,1.0,0.5714,0.9455,nan,-,-
+legacy,supcon,0,1,42,0.8516,0.0,nan,nan,0.9176,0.0,0.8485,0.8462,0.8571,0.898,0.9412,-,-
+legacy,ce,0,1,42,0.9615,0.0,nan,nan,0.9725,0.0,0.9394,0.9231,1.0,0.96,1.0,-,-
+simclr,selfcon,1,5,42 43 44 45 46,0.7863,0.1049,0.8082,0.1237,0.9132,0.0565,0.8606,0.9154,0.6571,0.9104,0.9706,simclr,minimal
+simclr,supcon,0,5,42 43 44 45 46,0.8066,0.1585,0.8478,0.0812,0.9945,0.0085,0.9091,0.9846,0.6286,0.9461,0.72,simclr,minimal
+simclr,ce,0,5,42 43 44 45 46,0.7094,0.1077,0.7302,0.0931,0.933,0.0509,0.8546,0.9615,0.4571,0.9125,1.0,-,simclr
+stacked_randaug,selfcon,0,5,42 43 44 45 46,0.717,0.0997,0.7692,0.1163,0.9286,0.0649,0.8667,0.9769,0.4571,0.9207,0.9,stacked_randaug,minimal
+stacked_randaug,supcon,1,5,42 43 44 45 46,0.7028,0.0863,0.8121,0.0539,0.8703,0.07,0.8606,0.9769,0.4286,0.917,0.7706,stacked_randaug,minimal
+stacked_randaug,ce,0,5,42 43 44 45 46,0.7428,0.116,0.8,0.1143,0.9505,0.051,0.8909,1.0,0.4857,0.9361,0.9741,-,stacked_randaug

@@ -1,0 +1,55 @@
+# ============================================================
+# Bobot model - 45 x 44 MB = ~2 GB. GitHub menolak >100 MB/berkas
+# dan repo ini tidak perlu bobotnya: semua angka sudah tersimpan
+# di outputs/reports/ dan outputs/predictions/*.json.
+# Hasilkan ulang dengan: src/train.py --save-model all
+# ============================================================
+outputs/runs/
+outputs/runs_closeup_ckpt/
+outputs/runs_pio_alive/
+outputs/runs_pio_eq/
+outputs/runs_prev_legacy/
+*.pt
+*.pth
+*.ckpt
+
+# ------------------------------------------------------------
+# 1215 crop hasil deteksi (16 MB). Bukan data berlabel - cuma
+# keluaran perantara detect.py. Hasilkan ulang: src/detect.py
+# ------------------------------------------------------------
+outputs/predictions/detect_crops/
+
+# ------------------------------------------------------------
+# Crop latih (15 MB, 932 berkas). Dibangun dari dataset sumber
+# yang ada di luar repo ini. Manifest & ringkasannya tetap
+# diikutkan supaya susunan split bisa diperiksa.
+# Hasilkan ulang: src/build_crops.py
+# ------------------------------------------------------------
+data/crops/alive/
+data/crops/dead/
+data/crops_pio/alive/
+data/crops_pio/dead/
+data/crops_pio_eq/alive/
+data/crops_pio_eq/dead/
+
+# ------------------------------------------------------------
+# Paper sumber (PDF, 6.4 MB) - berhak cipta penerbit, tidak
+# disebarkan ulang. Rujukannya ada di README.
+# ------------------------------------------------------------
+*.pdf
+
+# ------------------------------------------------------------
+# Lain-lain
+# ------------------------------------------------------------
+outputs/sweep.log
+__pycache__/
+*.py[cod]
+.venv*/
+.ipynb_checkpoints/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Salinan kerja train.py, bukan bagian hasil
+src/_train_backup.py
+src/_train_prefix.bak

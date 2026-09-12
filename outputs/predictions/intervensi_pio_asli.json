@@ -1,0 +1,28 @@
+{
+  "crops": "data/crops_pio",
+  "runs_dir": "outputs/runs_pio_alive",
+  "n_test": 78,
+  "results": {
+    "ce__hier_addone": {
+      "asli": 1.0,
+      "abu": 1.0,
+      "hue+26": 1.0,
+      "kabur": 0.9172932330827067,
+      "acak16": 1.0
+    },
+    "selfcon__simclr": {
+      "asli": 1.0,
+      "abu": 1.0,
+      "hue+26": 1.0,
+      "kabur": 0.8930659983291562,
+      "acak16": 1.0
+    },
+    "supcon__stacked_randaug": {
+      "asli": 1.0,
+      "abu": 1.0,
+      "hue+26": 1.0,
+      "kabur": 0.9665831244778613,
+      "acak16": 0.9991645781119465
+    }
+  }
+}

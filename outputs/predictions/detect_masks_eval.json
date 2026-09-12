@@ -1,0 +1,284 @@
+{
+  "weights": "C:\\Arib\\MASSA AYAM\\generalisasi-ayam-skripsi\\train model\\runs_compare\\cmp_yolov8m\\weights\\best.pt",
+  "root": "C:\\Arib\\CCTV\\patnet-pure\\dataset\\chick",
+  "n_images": 18,
+  "n_objects": 22,
+  "conf": 0.25,
+  "iou_nms": 0.7,
+  "results": [
+    {
+      "imgsz": 640,
+      "n_objects": 22,
+      "recall_iou50": 1.0,
+      "recall_cov90": 0.5,
+      "iou_mean": 0.7973136363636363,
+      "det_per_image": 68.5,
+      "per_object": [
+        {
+          "image": "ayam (1)",
+          "gt": [
+            165,
+            127,
+            233,
+            186
+          ],
+          "iou": 0.6626,
+          "coverage": 0.6753,
+          "conf": 0.8123
+        },
+        {
+          "image": "ayam (10)",
+          "gt": [
+            79,
+            184,
+            148,
+            244
+          ],
+          "iou": 0.6559,
+          "coverage": 0.6616,
+          "conf": 0.7955
+        },
+        {
+          "image": "ayam (11)",
+          "gt": [
+            19,
+            274,
+            85,
+            340
+          ],
+          "iou": 0.8225,
+          "coverage": 0.8225,
+          "conf": 0.7158
+        },
+        {
+          "image": "ayam (2)",
+          "gt": [
+            28,
+            326,
+            96,
+            388
+          ],
+          "iou": 0.7093,
+          "coverage": 0.7239,
+          "conf": 0.8569
+        },
+        {
+          "image": "ayam (2)",
+          "gt": [
+            12,
+            110,
+            64,
+            157
+          ],
+          "iou": 0.8552,
+          "coverage": 0.9602,
+          "conf": 0.872
+        },
+        {
+          "image": "ayam (3)",
+          "gt": [
+            158,
+            223,
+            229,
+            287
+          ],
+          "iou": 0.6877,
+          "coverage": 0.6964,
+          "conf": 0.8467
+        },
+        {
+          "image": "ayam (3)",
+          "gt": [
+            142,
+            8,
+            194,
+            56
+          ],
+          "iou": 0.8578,
+          "coverage": 0.9496,
+          "conf": 0.8741
+        },
+        {
+          "image": "ayam (4)",
+          "gt": [
+            358,
+            223,
+            429,
+            287
+          ],
+          "iou": 0.6731,
+          "coverage": 0.6892,
+          "conf": 0.8585
+        },
+        {
+          "image": "ayam (4)",
+          "gt": [
+            343,
+            8,
+            396,
+            55
+          ],
+          "iou": 0.9058,
+          "coverage": 0.979,
+          "conf": 0.8756
+        },
+        {
+          "image": "ayam (5)",
+          "gt": [
+            148,
+            345,
+            212,
+            415
+          ],
+          "iou": 0.6508,
+          "coverage": 0.6741,
+          "conf": 0.8409
+        },
+        {
+          "image": "ayam (5)",
+          "gt": [
+            379,
+            329,
+            425,
+            384
+          ],
+          "iou": 0.9156,
+          "coverage": 0.9695,
+          "conf": 0.8638
+        },
+        {
+          "image": "ayam (6)",
+          "gt": [
+            7,
+            62,
+            85,
+            127
+          ],
+          "iou": 0.6256,
+          "coverage": 0.6256,
+          "conf": 0.8469
+        },
+        {
+          "image": "ayam (7)",
+          "gt": [
+            357,
+            31,
+            426,
+            89
+          ],
+          "iou": 0.6285,
+          "coverage": 0.6406,
+          "conf": 0.8292
+        },
+        {
+          "image": "ayam (8)",
+          "gt": [
+            323,
+            184,
+            393,
+            244
+          ],
+          "iou": 0.6623,
+          "coverage": 0.6681,
+          "conf": 0.8134
+        },
+        {
+          "image": "ayam (9)",
+          "gt": [
+            274,
+            340,
+            339,
+            387
+          ],
+          "iou": 0.7162,
+          "coverage": 0.7162,
+          "conf": 0.8217
+        },
+        {
+          "image": "chick (1)",
+          "gt": [
+            17,
+            265,
+            74,
+            333
+          ],
+          "iou": 0.9507,
+          "coverage": 0.9905,
+          "conf": 0.7457
+        },
+        {
+          "image": "chick (2)",
+          "gt": [
+            254,
+            226,
+            310,
+            293
+          ],
+          "iou": 0.9156,
+          "coverage": 0.9948,
+          "conf": 0.8568
+        },
+        {
+          "image": "chick (3)",
+          "gt": [
+            253,
+            358,
+            310,
+            427
+          ],
+          "iou": 0.944,
+          "coverage": 0.9873,
+          "conf": 0.8531
+        },
+        {
+          "image": "chick (4)",
+          "gt": [
+            100,
+            17,
+            167,
+            74
+          ],
+          "iou": 0.954,
+          "coverage": 0.9999,
+          "conf": 0.864
+        },
+        {
+          "image": "chick (5)",
+          "gt": [
+            358,
+            99,
+            415,
+            167
+          ],
+          "iou": 0.9309,
+          "coverage": 0.9978,
+          "conf": 0.8489
+        },
+        {
+          "image": "chick (6)",
+          "gt": [
+            359,
+            359,
+            416,
+            426
+          ],
+          "iou": 0.8974,
+          "coverage": 1.0,
+          "conf": 0.8164
+        },
+        {
+          "image": "chick (7)",
+          "gt": [
+            254,
+            100,
+            310,
+            167
+          ],
+          "iou": 0.9194,
+          "coverage": 1.0,
+          "conf": 0.8534
+        }
+      ]
+    }
+  ]
+}

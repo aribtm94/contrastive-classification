@@ -1,0 +1,277 @@
+# =============================================================================
+# VARIAN ABLASI: sama seperti config_pio.yaml, TAPI resolusi disamakan
+# (crops.equalize_resolution 48 px) supaya jalan pintas ketajaman mati.
+#
+# Gunanya membuat angkanya JUJUR, bukan membuat modelnya pintar: baseline
+# ketajaman-saja jatuh dari test AUC 0.8596 ke 0.4194 (= tidak informatif).
+# Jalan pintas ukuran dan warna latar masih bisa tersisa.
+#
+#   python src/build_crops.py --config configs/config_pio_eq.yaml #       --alive-source pio
+#   python src/train.py --config configs/config_pio_eq.yaml --method all #       --seeds 42,43,44 --save-model all
+#   python src/eval_on_chick.py --config configs/config_pio_eq.yaml #       --runs outputs/runs_pio_eq
+# =============================================================================
+# =============================================================================
+# Konfigurasi pipeline: Deteksi Ayam (YOLO) -> Crop 224x224 -> Klasifikasi
+# Kontrastif (3 metode dibandingkan)
+# =============================================================================
+
+seed: 42
+device: auto            # auto | cuda | cpu
+
+# --- Tahap 1: Deteksi objek ------------------------------------------------
+detection:
+  # Model terbaik dari eksperimen 'generalisasi-ayam-skripsi'
+  # (yolov8m, mAP50-95 = 0.763, mAP50 = 0.935, imgsz 960, 100 epoch)
+  weights: "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/runs_compare/cmp_yolov8m/weights/best.pt"
+  # DIUKUR, bukan disalin dari training. Pada dataset chick (432x432) imgsz 960
+  # memperbesar gambar 2.2x sehingga tiap ayam jadi ~114 px di input jaringan,
+  # jauh di atas sebaran latih (median 33 px pada gambar 1920x1080 @960 = 17 px).
+  # Objek keluar dari rentang skala yang dipelajari dan recall runtuh:
+  #   imgsz  256   320   416   512   640   768   960   1280
+  #   recall 100%  100%  100%  100%  100%   95%   36%     0%   (IoU>=0.5, n=22)
+  # 640 dipilih karena recall 100% dengan IoU rata-rata tertinggi (0.797).
+  # Ukur ulang dengan: python src/eval_detect_masks.py
+  imgsz: 640
+  conf: 0.25
+  iou: 0.7              # NMS
+  max_det: 300
+  # Data uji deteksi (tanpa label -> hanya untuk inferensi/demo pipeline)
+  test_images: "C:/Arib/CCTV/patnet-pure/dataset/chick/images"
+
+# --- Tahap 2: Ekstraksi crop untuk classifier ------------------------------
+crops:
+  # Sumber data ayam MATI (COCO format, hasil Roboflow): 98 bbox / 86 gambar
+  dead_root: "C:/Arib/MASSA AYAM/Pretrained method vs trained objek/repro/data/dead-chikens"
+  splits: [train, valid, test]
+
+  out_dir: "data/crops_pio_eq"
+  manifest: "data/crops_pio_eq/manifest.csv"
+
+  # ---------------------------------------------------------------------
+  # Dari mana crop ayam HIDUP diambil?
+  #
+  #   same_image  (DEFAULT, disarankan)
+  #       Ayam hidup diambil dari FOTO YANG SAMA dengan ayam mati. Karena
+  #       kamera, kandang, dan pencahayaannya identik, satu-satunya pembeda
+  #       yang tersisa bagi classifier adalah kondisi ayamnya sendiri.
+  #
+  #   pio
+  #       Ayam hidup diambil dari dataset CCTV PIO (ribuan crop).
+  #       PERINGATAN: dataset ayam mati berupa foto close-up, sedangkan PIO
+  #       adalah CCTV tampak-atas. Perbedaan kamera/resolusi/sudut ini jauh
+  #       lebih mencolok daripada perbedaan mati-vs-hidup, sehingga model
+  #       bisa mencapai akurasi ~100% hanya dengan menebak "ini foto dari
+  #       dataset mana". Skor tinggi di sini TIDAK berarti model bisa
+  #       mengenali ayam mati. Gunakan hanya sebagai pembanding/ablasi.
+  #
+  #   both  -> gabungan keduanya (tetap terkena peringatan di atas)
+  # ---------------------------------------------------------------------
+  alive_source: same_image
+
+  # Detektor untuk mencari ayam hidup di foto close-up.
+  # CATATAN: YOLO PIO di atas TIDAK dipakai di sini. Model itu dilatih pada
+  # CCTV tampak-atas, sehingga pada foto close-up ia gagal total: dari 1889
+  # deteksi, NOL yang mengenai ayam mati, dan mayoritas box berukuran ~6 px
+  # (tekstur sekam, bukan ayam). Sebagai gantinya dipakai YOLOv8m COCO yang
+  # punya kelas 'bird' - terbukti mengenai 50 dari 98 bbox ayam mati, bukti
+  # bahwa yang dideteksi memang benar unggas.
+  alive_detector: "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/yolov8m.pt"
+  alive_detector_class: 14      # id kelas 'bird' pada COCO
+  alive_detector_imgsz: 640
+  alive_min_conf: 0.25
+  alive_min_box: 48             # buang box < 48 px (median calon hidup ~84 px)
+
+  # Deteksi yang menyentuh bbox ayam mati sedikit pun akan dibuang.
+  # Nilai sengaja dibuat sangat kecil (bukan 0.10) karena banyak ayam mati
+  # dalam satu foto TIDAK dianotasi - membuang yang bersinggungan mengurangi
+  # risiko ayam mati salah masuk ke kelas 'hidup'.
+  alive_max_iou_with_dead: 0.01
+
+  # Sumber alternatif ayam hidup (dipakai kalau alive_source = pio | both)
+  pio_images: "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/_pio_yolo/images/train"
+  pio_labels: "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/_pio_yolo/labels/train"
+  pio_max_crops: 300
+  pio_max_per_image: 12   # cegah 1 gambar menguras kuota (lihat collect_pio_alive)
+
+  # Samakan resolusi efektif kedua kelas SEBELUM di-letterbox ke 224.
+  # LATAR BELAKANG: crop ayam hidup median sisi pendek 83 px (100% harus
+  # diperbesar ke 224), crop ayam mati 212 px (cuma 58% yang diperbesar).
+  # Akibatnya KETAJAMAN gambar saja - tanpa melihat isinya sama sekali -
+  # sudah memberi test balanced accuracy 0.8846, mengalahkan dua dari tiga
+  # metode. Menurunkan semua crop ke sisi pendek yang sama akan mematikan
+  # jalan pintas itu di sumbernya.
+  #
+  # DEFAULT MATI. Menyalakannya berarti membangun ulang data/crops/ dan
+  # manifest.csv, sehingga semua angka di outputs/runs/ dan README jadi
+  # tidak sebanding lagi. Jalankan sebagai ablasi terpisah yang diberi
+  # label jelas, bukan diam-diam.
+  equalize_resolution:
+    enabled: true
+    target_short_side: 48
+
+  bbox_padding: 0.10    # margin konteks di sekitar bbox (10%)
+  min_box_size: 16      # bbox ayam mati lebih kecil dari ini dilewati
+
+  # Rasio maksimum hidup:mati agar kelas tidak terlalu timpang
+  max_alive_per_dead: 3.0
+
+  # Split dilakukan per-GAMBAR ASAL, bukan per-crop.
+  # Dataset ini hasil augmentasi Roboflow: satu foto asli muncul sampai 3x
+  # dengan nama berbeda. Kalau displit per crop, versi augmentasi dari foto
+  # yang sama bocor ke train dan test sekaligus -> skor jadi palsu.
+  split_by_base_image: true
+  split_ratio: [0.6, 0.2, 0.2]    # train / val / test
+
+  # Simpan lembar kontak crop hidup & mati untuk diperiksa mata
+  save_review_grid: true
+
+# --- Tahap 3: Klasifikasi kontrastif ---------------------------------------
+classifier:
+  image_size: 224           # BATAS INPUT: 224x224 (ketentuan)
+  resize_mode: letterbox    # letterbox (jaga rasio aspek) | resize (paksa)
+
+  backbone: resnet18
+  pretrained: true
+  feature_dim: 512          # dimensi output resnet18
+  proj_dim: 128             # dimensi embedding kontrastif
+  proj_hidden: 512
+
+  batch_size: 32
+  num_workers: 0            # 0 = paling aman di Windows
+  temperature: 0.07
+
+  # Tahap kontrastif (metode A & B)
+  epochs_contrastive: 60
+  lr_contrastive: 0.0005
+
+  # Linear probe (encoder dibekukan, hanya kepala klasifikasi dilatih)
+  epochs_probe: 40
+  lr_probe: 0.001
+
+  # Klasifikasi biasa (metode C)
+  epochs_ce: 60
+  lr_ce: 0.0001
+
+  weight_decay: 0.0001
+  class_weighting: true     # tangani ketimpangan hidup vs mati
+
+  # Bobot cross-entropy yang digabung ke SupCon (metode B).
+  # 0.0 = SupCon murni; > 0 = SupCon + CE dilatih bersamaan.
+  supcon_ce_weight: 0.0
+
+  early_stop_patience: 15
+
+
+# --- Augmentasi per metode -------------------------------------------------
+# Tiap metode memakai kebijakan augmentasi dari SATU paper yang berbeda.
+#
+# PERINGATAN ILMIAH: karena augmentasinya berbeda-beda, membandingkan ketiga
+# metode pada DIAGONAL (selfcon+simclr vs supcon+stacked_randaug vs
+# ce+hier_addone) TIDAK lagi mengisolasi fungsi loss - yang berubah dua hal
+# sekaligus. Jalankan `python src/train.py --grid full` sekali sebagai
+# kontrol: kolomnya (augmentasi ditahan, loss divariasikan) memulihkan
+# perbandingan metode yang sah. Lihat outputs/reports/augmentation_report.md.
+#
+# TIDAK ADA ROTASI di kebijakan mana pun, walaupun ketiga paper memakainya.
+# Orientasi (tergeletak vs berdiri tegak) adalah sinyal nyata yang
+# membedakan mati dan hidup di dataset ini; memutar gambar menghapusnya.
+augmentation:
+  by_method:
+    selfcon: {contrastive: simclr,          head: minimal}
+    supcon:  {contrastive: stacked_randaug, head: minimal}
+    ce:      {contrastive: null,            head: hier_addone}
+
+  # Kunci tahap linear probe ke 'minimal' untuk selfcon/supcon.
+  # Alasan: probe mengukur kualitas ENCODER. Kalau augmentasi probe ikut
+  # berbeda per metode, angkanya mencampur dua efek sekaligus. Khosla dkk.
+  # mengukur ini: silang pretrain-aug x probe-aug menggeser top-1 > 3 poin.
+  # Metode 'ce' terpaksa berbeda - tahap kepala adalah satu-satunya tahap
+  # latihnya; asimetri ini ditulis terang-terangan di laporan.
+  lock_probe_policy: true
+
+  # Pengaturan gambar contoh di src/aug_report.py
+  preview_views: 6
+  preview_samples: 4          # 2 hidup + 2 mati
+
+  policies:
+    none:
+      ops: []
+
+    # == perilaku lama augment(strong=False): flip saja ==
+    minimal:
+      ops:
+        - {op: hflip, p: 0.5}
+
+    # == perilaku lama augment(strong=True), disimpan sebagai pembanding ==
+    # Blur k=3/5 di sini TERLALU LEMAH: AUC ketajaman masih 0.851.
+    legacy:
+      ops:
+        - {op: hflip,           p: 0.5}
+        - {op: rrc_iso,         p: 0.7, scale: [0.70, 1.00]}
+        - {op: bright_contrast, p: 0.8, alpha: [0.7, 1.3], beta: [-30, 30]}
+        - {op: hsv,             p: 0.5, sat: [0.6, 1.4], hue: [-8, 8]}
+        - {op: gray,            p: 0.2}
+        - {op: blur,            p: 0.3, kernel: [3, 5]}
+
+    # ---- A. SimCLR - Chen dkk., ICML 2020, Appendix A ------------------
+    # Urutan paper: crop -> flip -> distorsi warna -> grayscale -> blur.
+    # Gambar 5 paper: crop + distorsi warna adalah pasangan TERKUAT
+    # (+23.2 poin di atas crop saja), karena warna/tekstur mentah harus
+    # dimatikan supaya encoder tidak menghafal histogram warna.
+    # Blur kernel = 10% sisi gambar = 23 px pada 224 - jauh lebih kuat
+    # daripada k=3/5 versi lama, dan itulah yang langsung menyerang
+    # jalan pintas ketajaman (lihat laporan).
+    simclr:
+      ops:
+        - {op: rrc,          p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333]}
+        - {op: hflip,        p: 0.5}
+        - {op: color_jitter, p: 0.8, strength: 1.0}
+        - {op: gray,         p: 0.2}
+        - {op: blur,         p: 0.5, kernel_frac: 0.10, sigma: [0.1, 2.0]}
+
+    # ---- B. Stacked RandAugment - Khosla dkk., NeurIPS 2020 -------------
+    # Paper SupCon TIDAK mendefinisikan augmentasinya sendiri; ia
+    # membandingkan AutoAugment / RandAugment / SimAugment / Stacked
+    # RandAugment, dan yang terakhir terbaik untuk ResNet dalam.
+    # "Stacked" = rangkaian 2 op dijalankan DUA KALI berurutan.
+    # SENGAJA TANPA Gaussian blur (blur bukan bagian RandAugment), supaya
+    # kontras blur-vs-tanpa-blur terlihat jelas di tabel kebocoran.
+    # Rotate/ShearX/ShearY dibuang dari kolam op -> lihat catatan di atas.
+    stacked_randaug:
+      ops:
+        - {op: rrc,     p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333]}
+        - {op: hflip,   p: 0.5}
+        - {op: randaug, p: 1.0, n: 2, magnitude: 9, stacked: true}
+
+    # ---- C. Zhang & Ma, CVPR 2022 - modul augmentasi "add-one" ----------
+    # t0 = crop (selalu), lalu t1..t4 = warna, grayscale, blur, flip PERSIS
+    # urutan paper (urutan ini yang menang: 67.1 vs 64.5 untuk urutan
+    # terburuk). level_sampling meniru "expanded views": tiap sampel
+    # memakai subset T_i dengan i ~ U{1..4}, jadi sebagian pasangan cuma
+    # beda crop+warna (invariansi lemah) dan sebagian beda penuh.
+    #
+    # TIDAK diimplementasikan: loss multi-stage 4-tap, 8 view, dan
+    # augmentation-parameter embedding. Ketiganya mengubah ARSITEKTUR,
+    # sedangkan syarat perbandingan ini adalah arsitektur identik.
+    # Laporan wajib menyebut batasan ini - menyebutnya "metode Zhang"
+    # tanpa catatan itu klaim yang tidak benar.
+    hier_addone:
+      level_sampling: true
+      ops:
+        - {op: rrc,          p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333], level: 0}
+        - {op: color_jitter, p: 0.8, strength: 1.0, level: 1}
+        - {op: gray,         p: 0.2, level: 2}
+        - {op: blur,         p: 0.5, kernel_frac: 0.10, sigma: [0.1, 2.0], level: 3}
+        - {op: hflip,        p: 0.5, level: 4}
+
+# --- Output ----------------------------------------------------------------
+output:
+  runs_dir: "outputs/runs_pio_eq"
+  reports_dir: "outputs/reports"
+  predictions_dir: "outputs/predictions"
+
+# Tiga metode yang dibandingkan (lihat src/train.py)
+methods:
+  selfcon: "Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe"
+  supcon:  "Supervised Contrastive - label hidup & mati digabung dalam loss"
+  ce:      "Klasifikasi biasa (Cross-Entropy) - baseline"

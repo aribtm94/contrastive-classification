@@ -1,0 +1,54 @@
+{
+  "runs_dir": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs",
+  "n_images": 18,
+  "results": [
+    {
+      "method": "ce",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.08169807411933072,
+      "p_other": 0.031160260594948027,
+      "auc": 0.5224796159414768
+    },
+    {
+      "method": "ce__hier_addone__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.08169807411933072,
+      "p_other": 0.031160260594948027,
+      "auc": 0.5224796159414768
+    },
+    {
+      "method": "selfcon",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.3331281207501888,
+      "p_other": 0.2654455006458271,
+      "auc": 0.5691914958469861
+    },
+    {
+      "method": "selfcon__simclr__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.3331281207501888,
+      "p_other": 0.2654455006458271,
+      "auc": 0.5691914958469861
+    },
+    {
+      "method": "supcon",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.2623238888653842,
+      "p_other": 0.20093312706282693,
+      "auc": 0.6056922959689095
+    },
+    {
+      "method": "supcon__stacked_randaug__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.2623238888653842,
+      "p_other": 0.20093312706282693,
+      "auc": 0.6056922959689095
+    }
+  ]
+}

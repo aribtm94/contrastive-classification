@@ -1,0 +1,106 @@
+{
+  "runs_dir": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_alive",
+  "n_images": 18,
+  "equalize": {
+    "enabled": false,
+    "target_short_side": 96
+  },
+  "results": [
+    {
+      "method": "ce",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.1715546328817833,
+      "p_other": 0.12258000169128924,
+      "auc": 0.6389926083974701
+    },
+    {
+      "method": "ce__hier_addone__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.15118430364368993,
+      "p_other": 0.11736452892241271,
+      "auc": 0.5658005029337804
+    },
+    {
+      "method": "ce__hier_addone__s43",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.1715546328817833,
+      "p_other": 0.12258000169128924,
+      "auc": 0.6389926083974701
+    },
+    {
+      "method": "ce__hier_addone__s44",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.051889849612383514,
+      "p_other": 0.09017993612178085,
+      "auc": 0.4223881734359522
+    },
+    {
+      "method": "selfcon",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.04220775459808382,
+      "p_other": 0.05381924760238908,
+      "auc": 0.5497218623790292
+    },
+    {
+      "method": "selfcon__simclr__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.12357130158819597,
+      "p_other": 0.08546154074877145,
+      "auc": 0.6306484797683457
+    },
+    {
+      "method": "selfcon__simclr__s43",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.04220775459808382,
+      "p_other": 0.05381924760238908,
+      "auc": 0.5497218623790292
+    },
+    {
+      "method": "selfcon__simclr__s44",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.1513566682961854,
+      "p_other": 0.14494650607908335,
+      "auc": 0.5603139526023013
+    },
+    {
+      "method": "supcon",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.3965286307714202,
+      "p_other": 0.29332245200519563,
+      "auc": 0.5640478549112246
+    },
+    {
+      "method": "supcon__stacked_randaug__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.24026614461432805,
+      "p_other": 0.13928029469502443,
+      "auc": 0.7285681627676598
+    },
+    {
+      "method": "supcon__stacked_randaug__s43",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.43023579025810416,
+      "p_other": 0.3420326364291434,
+      "auc": 0.5917473138764002
+    },
+    {
+      "method": "supcon__stacked_randaug__s44",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.36641317538239737,
+      "p_other": 0.16666579091609957,
+      "auc": 0.7082984073763622
+    }
+  ]
+}

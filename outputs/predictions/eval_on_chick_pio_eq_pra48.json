@@ -1,0 +1,106 @@
+{
+  "runs_dir": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_eq",
+  "n_images": 18,
+  "equalize": {
+    "enabled": true,
+    "target_short_side": 48
+  },
+  "results": [
+    {
+      "method": "ce",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.08750974975886162,
+      "p_other": 0.10023958754620987,
+      "auc": 0.5744113388706851
+    },
+    {
+      "method": "ce__hier_addone__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.08750974975886162,
+      "p_other": 0.10023958754620987,
+      "auc": 0.5744113388706851
+    },
+    {
+      "method": "ce__hier_addone__s43",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.4979474721899764,
+      "p_other": 0.1700543582316884,
+      "auc": 0.756991541568239
+    },
+    {
+      "method": "ce__hier_addone__s44",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.3258468449454416,
+      "p_other": 0.14068710683208357,
+      "auc": 0.7415987198049226
+    },
+    {
+      "method": "selfcon",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.25727585701017897,
+      "p_other": 0.154719891854517,
+      "auc": 0.6701592623637888
+    },
+    {
+      "method": "selfcon__simclr__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.25727585701017897,
+      "p_other": 0.154719891854517,
+      "auc": 0.6701592623637888
+    },
+    {
+      "method": "selfcon__simclr__s43",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.39708960157903755,
+      "p_other": 0.2911867140800117,
+      "auc": 0.6359826259239503
+    },
+    {
+      "method": "selfcon__simclr__s44",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.10734229629055005,
+      "p_other": 0.11494224929944515,
+      "auc": 0.5269755391297721
+    },
+    {
+      "method": "supcon",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.5118110176514495,
+      "p_other": 0.278097731882725,
+      "auc": 0.6836089308847063
+    },
+    {
+      "method": "supcon__stacked_randaug__s42",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.5118110176514495,
+      "p_other": 0.278097731882725,
+      "auc": 0.6836089308847063
+    },
+    {
+      "method": "supcon__stacked_randaug__s43",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.4955684414810755,
+      "p_other": 0.25659547613333356,
+      "auc": 0.6842566486321725
+    },
+    {
+      "method": "supcon__stacked_randaug__s44",
+      "n_dead": 22,
+      "n_other": 1193,
+      "p_dead": 0.5915837572379545,
+      "p_other": 0.2704536542466202,
+      "auc": 0.7902918539967995
+    }
+  ]
+}
