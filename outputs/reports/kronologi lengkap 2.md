@@ -453,6 +453,7 @@ Yang paling relevan untuk dibaca berdampingan dengan dokumen ini:
 
 | berkas | isi |
 |---|---|
+| [`kesimpulan_kronologi_2.md`](kesimpulan_kronologi_2.md) | **kesimpulan dokumen ini** - 4 pertanyaan, 4 jawaban, 4 gambar |
 | [`kronologi_lengkap.md`](kronologi_lengkap.md) | **dokumen pertama** - babak 1 sampai 13 |
 | [`update_14_september.md`](update_14_september.md) | ringkasan eksekutif hari yang sama |
 | [`pio_development_protocol.md`](pio_development_protocol.md) | batas data development + aturan loss per epoch |
