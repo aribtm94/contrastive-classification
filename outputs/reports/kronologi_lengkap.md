@@ -16,10 +16,7 @@ istilah teknis.
 > Dibuktikan dengan menghancurkan bentuk ayam di gambar - skornya tidak turun.
 > Pada data CCTV yang sesungguhnya, skornya jatuh ke 0.65 (0.5 = menebak). Tiga
 > cara penataan data dicoba untuk memperbaikinya; tidak satu pun berhasil.
-> Akarnya jumlah data latih, dan itu butuh anotasi baru. **Babak 14** menutup
-> lingkarannya: di bawah protokol test yang disegel, model terbaik mencapai AUC
-> 0.792 - masih kalah dari rata-rata saturasi satu crop (0.883) yang tidak
-> memakai model sama sekali.
+> Akarnya jumlah data latih, dan itu butuh anotasi baru.
 
 ---
 
@@ -40,11 +37,8 @@ istilah teknis.
 | [10](#10-babak-10-temuan-terbesar---classifier-tidak-melihat-bentuk-ayam) | **Classifier buta bentuk** | 18/18 tak terganggu |
 | [11](#11-babak-11-membandingkan-dengan-acuan-yang-benar) | Acuan yang benar | tidak ada yang menang |
 | [12](#12-kumpulan-masalah-yang-ditemukan) | Daftar masalah | 11 masalah + statusnya |
-| [13](#13-daftar-gambar-hasil-eksperimen) | Daftar gambar | 19 figur |
+| [13](#13-daftar-gambar-hasil-eksperimen) | Daftar gambar | 16 figur |
 | [14](#14-menghitung-ulang-semuanya) | Reproduksi | perintah lengkap |
-| [16](#16-babak-12---membandingkan-ayam-dalam-frame-yang-sama) | Babak 12: skor relatif satu-frame | lolos gerbang kausal, belum unggul |
-| [-](#babak-13---batas-data-dari-dosen-dan-kurva-loss-per-epoch) | Babak 13: batas data dikunci | chick jadi test, loss tiap epoch |
-| [-](#babak-14---membuka-laci-18-run-registry-dibekukan-dan-angka-test-yang-pertama) | **Babak 14: laci dibuka** | **AUC 0.792, kalah dari saturasi 0.883** |
 
 ---
 
@@ -1129,9 +1123,6 @@ Semua ada di `outputs/reports/`.
 | [`pio_salah_hidup.jpg`](pio_salah_hidup.jpg) | **ayam hidup disebut mati, p 0.813** | 8 |
 | [`pio_equalize.jpg`](pio_equalize.jpg) | crop sebelum vs sesudah disamakan | 8 |
 | [`acak_bentuk.jpg`](acak_bentuk.jpg) | **bentuk diacak, AUC tidak bergeming** | 10 |
-| [`babak14_vs_baseline.png`](babak14_vs_baseline.png) | **6 pipeline vs baseline saturasi** | 14 |
-| [`babak14_acak16.png`](babak14_acak16.png) | **gerbang kausal: acak16 malah menaikkan AUC** | 14 |
-| [`babak14_saturasi.png`](babak14_saturasi.png) | sebaran saturasi mati vs hidup di test | 14 |
 
 
 
@@ -1226,9 +1217,7 @@ $PY src/eval_intervensi.py --config configs/config_pio_eq.yaml \
 | [`pio_saja.md`](pio_saja.md) | percobaan PIO, uji intervensi, vonis akhir |
 | [`same_frame_stage1.md`](same_frame_stage1.md) | Tahap 1 skor relatif satu-frame pada 27 checkpoint |
 | [`same_frame_stage1_causal.md`](same_frame_stage1_causal.md) | gerbang kausal asli vs acak16 |
-| [`pio_development_protocol.md`](pio_development_protocol.md) | batas data development + aturan pembukaan test (babak 13) |
-| [`fixed_chick.md`](fixed_chick.md) | tabel lengkap benchmark test, 18 baris x 3 scorer (babak 14) |
-| [`update_14_september.md`](update_14_september.md) | ringkasan sehari penuh babak 14 |
+| [`kronologi lengkap 2.md`](kronologi%20lengkap%202.md) | **lanjutan dokumen ini** - babak 14, hari laci test dibuka |
 
 ---
 
@@ -1284,6 +1273,41 @@ berasal dari perbandingan relatif atau semata-mata dari data satu-domain.
 
 ---
 
+## Penutup: satu kalimat per babak
+
+1. Pipeline dua tahap dibangun - YOLO lalu classifier - supaya soal "di mana
+   ayamnya" dan "ayam ini mati atau hidup" bisa dinilai terpisah.
+2. Tiga metode kontrastif disiapkan dengan arsitektur dan data identik.
+3. Tiap metode diberi augmentasi dari paper aslinya, yang melahirkan
+   perbandingan 2 faktor - diatasi dengan menjalankan grid 3x3 penuh.
+4. **Ternyata mengukur ketajaman saja sudah mengalahkan semua model**, karena
+   crop ayam hidup lebih kecil lalu diperbesar.
+5. Val set jenuh di 1.0 dengan 14 ayam hidup, jadi tidak bisa dipakai memilih
+   apa pun.
+6. Di CCTV sesungguhnya: **deteksi 100%, klasifikasi 0.65** - hambatannya di
+   classifier.
+7. Penyebab deteksi awal yang gagal ternyata `imgsz: 960` - arahnya terbalik
+   dari dugaan; diperbaiki ke 640, recall 36% -> 100%.
+8. Latihan dengan PIO memberi **bacc 1.0000 yang palsu**, karena PIO satu kelas
+   sehingga label menjadi identik dengan domain kamera.
+9. **Ada kekeliruan** menyimpulkan sebab dari korelasi; diganti dengan uji
+   intervensi, dan kekeliruannya ditulis ke dalam kode.
+10. **Temuan terbesar: tidak satu pun dari 18 checkpoint membaca bentuk ayam** -
+    bentuknya dihancurkan, skornya tidak turun.
+11. Terhadap acuan yang benar, **tidak ada satu pun dari tiga susunan data yang
+    terbukti lebih baik** - persis yang diperkirakan kalau tidak ada yang
+    membaca bentuk.
+12. Skor anomali relatif satu-frame mulai membaca susunan/bentuk, tetapi belum
+    konsisten mengungguli classifier absolut; berikutnya wajib diuji melawan
+    classifier biasa yang dilatih langsung pada domain chick.
+
+**Langkah berikutnya yang akan bergerak:** Tahap 2, yaitu baseline classifier
+domain-chick dengan leave-one-frame-out. Sesudah kontrol itu barulah ranking
+loss satu-frame dapat dinilai secara adil. Batas datanya tetap keras: hanya 22
+ayam mati dari 18 frame, sehingga hasil apa pun harus dibaca sebagai bukti awal.
+
+---
+
 ## Babak 13 - batas data dari dosen dan kurva loss per epoch
 
 Rencana melatih classifier langsung pada 943 crop valid chick tidak dilanjutkan.
@@ -1315,389 +1339,13 @@ Protokol rinci: [`pio_development_protocol.md`](pio_development_protocol.md).
 
 ---
 
-## Babak 14 - membuka laci: 18 run, registry dibekukan, dan angka test yang pertama
-
-Babak 13 menutup soal ujiannya di dalam laci. Babak 14 adalah hari ketika laci
-itu dibuka - sesudah seluruh jawaban dikumpulkan dan tidak bisa diubah lagi.
-
-> **Perumpamaan pembuka.** Selama sebelas babak, kita menyusun soal ujian,
-> mengerjakannya, lalu memeriksa sendiri jawabannya - dan tiap kali nilainya
-> bagus, ternyata yang bagus adalah soalnya, bukan muridnya.
->
-> Babak 13 mengubah aturannya: soal ujian ditulis orang lain, disegel, dan
-> dikunci di laci. Murid belajar tanpa pernah melihat soal itu. Hari ini
-> segelnya dibuka. Yang penting bukan nilainya - yang penting **kita tidak lagi
-> bisa menawar nilainya**, karena kunci lacinya baru diputar setelah semua
-> jawaban ditandatangani.
-
-### Urutannya, dari pagi sampai sore
-
-| jam | yang terjadi |
-|---|---|
-| 11:52 - 12:25 | 9 run PIO asli (3 pipeline x 3 seed), 1972 detik komputasi |
-| 12:25 - 12:57 | 9 run PIO eq48 (3 pipeline x 3 seed), 1942 detik komputasi |
-| 13:0x | registry dibekukan: SHA-256 checkpoint, config, split, dan 10 berkas sumber |
-| 13:0x | test dibuka pertama kali - lalu **dua bug pelaporan ketahuan** |
-| 13:1x | bug diperbaiki, registry dibekukan ulang, test dijalankan ulang |
-
-Delapan belas run selesai dengan exit code 0, tanpa satu pun error. Tahap
-contrastive selalu berjalan penuh 60 epoch; yang berhenti lebih awal hanya
-linear probe dan CE.
-
-Urutan ini bukan basa-basi administratif. **Registry dibekukan sebelum test
-dibuka** - artinya daftar checkpoint yang boleh diuji sudah terkunci dan
-ter-hash sebelum ada satu angka test pun yang terlihat. Tidak ada kesempatan
-untuk "mencoba yang lain" setelah melihat hasilnya.
-
-> **Perumpamaan.** Seperti menyegel amplop jawaban dan menandatangani segelnya
-> di depan saksi, sebelum panitia membuka kunci soal. Kalau amplopnya dibuka
-> belakangan, tanda tangannya tetap di situ - orang bisa memeriksa bahwa isinya
-> tidak diganti.
-
-### Cacat yang ketahuan sebelum angkanya dipublikasi
-
-Test dibuka, tabelnya terbit - dan satu kolomnya mustahil. Audit crop
-`bukan ayam` melaporkan **272 dari 272** di setiap baris, untuk top-1, top-3,
-dan top-5 sekaligus. Padahal top-1 pada 18 frame paling banyak memuat **18**
-crop. Angka itu tidak mungkin.
-
-Penyebabnya satu baris:
-
-```python
-# salah - nilai kedua dari ranks_within_frame adalah PERSENTIL, bukan peringkat
-_, rel_op_rank, rel_op_norm = ranks_within_frame(...)
-# benar
-rel_op_rank, _, rel_op_norm = ranks_within_frame(...)
-```
-
-Karena persentil selalu di bawah 1, syarat `peringkat <= k` selalu benar, jadi
-seluruh 272 crop dihitung "masuk top-k". Bug kedua lebih sederhana:
-`report_fixed_chick.py` menulis judul "Sensitivitas acak16" beserta
-peringatannya, tetapi **tidak pernah mengeluarkan tabelnya** - gerbang kausal
-tidak menghasilkan satu angka pun yang terbaca.
-
-Keduanya diperbaiki lebih dulu, registry dibekukan ulang supaya `git_commit`
-dan `source_sha256` menunjuk ke kode yang sudah benar, lalu seluruh benchmark
-dijalankan ulang. Tabel metrik utama terbit **identik angka demi angka** -
-karena fungsi `threshold_free` menghitung peringkatnya sendiri dengan benar -
-dan hanya kolom audit yang berubah. Itu bukti bahwa perbaikannya tepat sasaran
-dan tidak diam-diam menggeser hasil.
-
-> **Perumpamaan.** Timbangan di pasar menunjukkan 272 kilo untuk sekantong
-> cabai. Yang benar bukan mencari pembeli yang mau percaya, tapi menyadari
-> bahwa jarumnya sedang membaca skala yang salah. Sesudah diperbaiki, cabainya
-> tetap cabai yang sama - hanya angkanya yang akhirnya masuk akal.
-
-### Kurva loss: satu pipeline belajar, satu lagi nyaris tidak
-
-Permintaan di babak 13 - loss tercatat tiap epoch - sekarang punya
-hasilnya. Rata-rata tiga seed, dari epoch pertama ke epoch terakhir:
-
-| varian | tahap | train loss | validation loss |
-|---|---|---|---|
-| asli | selfcon contrastive (60 ep) | 3.17 -> 0.24 | 3.19 -> 1.19 |
-| asli | **supcon contrastive (60 ep)** | **4.09 -> 3.54** | **3.81 -> 3.58** |
-| asli | CE (20-26 ep) | 0.44 -> 0.04 | 0.11 -> 0.01 |
-| eq48 | selfcon contrastive (60 ep) | 3.64 -> 0.33 | 3.73 -> 1.34 |
-| eq48 | **supcon contrastive (60 ep)** | **4.23 -> 3.55** | **4.05 -> 3.62** |
-| eq48 | CE (20-22 ep) | 0.57 -> 0.12 | 0.38 -> 0.02 |
-
-SelfCon sehat: train dan validation turun bersama, tidak ada divergensi liar.
-Tetapi **SupCon nyaris tidak bergerak** - 4.09 turun ke 3.54 dalam 60 epoch
-penuh. Loss SupCon memang tidak menuju nol karena dinormalisasi atas banyak
-positif, jadi datar bukan otomatis berarti gagal. Yang mencurigakan adalah
-kombinasinya dengan fakta lain: probe linier sesudahnya turun sampai
-0.0005-0.0014, dan SupCon-lah yang justru menang di test.
-
-Itu menimbulkan pertanyaan yang belum terjawab: kalau tahap contrastive-nya
-hampir tidak belajar, **siapa yang sebenarnya memisahkan kelasnya?** Dugaan
-sementara: probe liniernya, bekerja di atas fitur backbone yang sudah cukup
-terpisah sejak awal karena `label = domain`. Ini ditulis sebagai pekerjaan yang
-harus diperiksa, bukan sebagai keberhasilan contrastive.
-
-> **Perumpamaan.** Seorang pelatih mengaku muridnya menang lomba berkat latihan
-> enam bulan. Tapi catatan absensinya menunjukkan si murid hampir tidak pernah
-> datang. Mungkin dia memang berbakat sejak awal - tapi kalau begitu, jangan
-> kreditkan kemenangannya ke latihan.
-
-### Validation tetap jenuh - persis seperti ramalan babak 8
-
-Seluruh 9 run PIO asli mencapai **AUC validation 1.0000**. Checkpoint terpilih
-sering pada epoch yang sangat awal - SupCon pada epoch **1, 1, dan 2**.
-
-| varian | metode | epoch terpilih (s42/s43/s44) | val bacc | val AUC |
-|---|---|---|---|---|
-| asli | ce | 11 / 10 / 5 | 1.0000 semua | 1.0000 |
-| asli | selfcon | 10 / 3 / 36 | 1.0000 / 1.0000 / 0.9913 | 1.0000 |
-| asli | supcon | 1 / 1 / 2 | 1.0000 / 0.9957 / 0.9957 | 1.0000 |
-| eq48 | ce | 5 / 7 / 7 | 1.0000 semua | 1.0000 |
-| eq48 | selfcon | 24 / 8 / 6 | 0.9120 / 0.9245 / 0.8940 | 0.9930 / 0.9898 / 0.9674 |
-| eq48 | supcon | 2 / 4 / 1 | 1.0000 / 1.0000 / 0.9625 | 1.0000 / 1.0000 / 0.9996 |
-
-Model yang "selesai belajar" pada epoch 1 bukan model yang menguasai soal. Itu
-model yang menemukan bahwa soalnya sudah terjawab sejak halaman sampul.
-
-Satu-satunya baris yang **tidak** jenuh adalah selfcon pada eq48. Itu konsisten
-dengan babak 8: equalization memotong jalan pintas ketajaman (val AUC ketajaman
-0.878 -> 0.565), dan metode tanpa label paling terpukul. SupCon yang punya label
-- dan label itu identik dengan domain - tetap 1.0000.
-
-### Hasil test: angka terbaik, dan angka yang mengalahkannya
-
-Kohortnya: **943 ayam valid dari 18 frame** - 22 mati, 921 hidup - ditambah 272
-crop `bukan ayam` sebagai pengganggu pada peringkat operational. Rata-rata tiga
-seed.
-
-| varian | metode | AP pooled | AUC pooled | Recall@3 | MRR |
-|---|---|---:|---:|---:|---:|
-| asli | selfcon | 0.024 +/- 0.006 | 0.493 +/- 0.101 | 0.037 | 0.080 |
-| asli | ce | 0.039 +/- 0.005 | 0.591 +/- 0.037 | 0.093 | 0.149 |
-| asli | supcon | 0.091 +/- 0.026 | 0.676 +/- 0.036 | 0.343 | 0.312 |
-| eq48 | selfcon | 0.033 +/- 0.011 | 0.581 +/- 0.120 | 0.093 | 0.147 |
-| eq48 | ce | 0.165 +/- 0.086 | 0.744 +/- 0.067 | 0.361 | 0.346 |
-| **eq48** | **supcon** | **0.386 +/- 0.063** | **0.792 +/- 0.073** | **0.519** | **0.536** |
-
-Urutannya konsisten di keempat metrik: **supcon > ce > selfcon**, dan **eq48 >
-asli**. Itu kabar baiknya, dan itu nyata.
-
-Lalu baseline tanpa model diukur pada crop test yang sama - bukan model apa pun,
-hanya satu angka statistik gambar:
-
-| ciri | AUC pooled | AP pooled | Recall@3 |
-|---|---:|---:|---:|
-| **saturasi** | **0.883** | 0.299 | 0.389 |
-| bbox sisi pendek | 0.786 | 0.057 | 0.167 |
-| luas bbox | 0.724 | 0.043 | 0.167 |
-| kepercayaan detektor | 0.540 | 0.024 | 0.000 |
-| ketajaman | 0.536 | 0.032 | 0.111 |
-
-![model vs baseline saturasi](babak14_vs_baseline.png)
-
-*Enam pipeline, AUC pooled, rata-rata tiga seed dengan simpangan antar-seed.
-Garis jingga adalah saturasi saja - tanpa model, tanpa training, tanpa GPU.
-Tidak satu pun batang menyentuhnya.*
-
-**Ini angka terpenting dari seluruh babak.** Model terbaik hasil 18 run mencapai
-AUC 0.792. Rata-rata saturasi satu crop mencapai 0.883. Tidak satu pun dari 18
-checkpoint melewatinya.
-
-Modelnya menang hanya pada AP (0.386 vs 0.299) dan Recall@3 (0.519 vs 0.389) -
-artinya ia lebih baik **menaruh ayam mati di peringkat paling atas**, walaupun
-urutan keseluruhannya lebih buruk. Itu perbedaan yang nyata dan ada gunanya
-untuk operator yang hanya memeriksa 3 kandidat teratas per frame. Tapi itu bukan
-"model mengenali ayam mati".
-
-![sebaran saturasi mati vs hidup](babak14_saturasi.png)
-
-*Kenapa satu angka warna sudah cukup jauh: 22 ayam mati (jingga) hampir semuanya
-duduk di saturasi 39-67, sementara 921 ayam hidup (biru) menumpuk di 10-35. Ayam
-mati di dataset ini kebetulan terekam pada bagian lantai yang warnanya lebih
-pekat.*
-
-> **Perumpamaan.** Lomba menebak berat sapi. Seorang ahli dengan alat ukur
-> lengkap menebak dalam selisih 40 kilo. Seorang anak yang cuma melihat sekilas
-> dan berkata "yang di kandang kanan lebih berat" ternyata lebih sering benar,
-> karena kandang kanan kebetulan berisi sapi yang lebih tua.
->
-> Anak itu tidak bisa menebak berat sapi. Dia menebak kandang. Dan selama
-> ujiannya disusun begitu, dia akan terus menang - tanpa pernah belajar apa-apa
-> tentang sapi.
-
-### Gerbang kausal: bentuk dihancurkan, skornya malah naik
-
-Perlakuan `acak16` yang sama dari babak 10 - crop dipecah 4x4 lalu petaknya
-diacak (derangement, tanpa petak yang tetap di tempatnya) - dipakai lagi di
-sini. Bentuk dan pose hancur; tekstur dan warna lokal utuh.
-
-| varian | metode | AUC asli | AUC acak16 | delta |
-|---|---|---:|---:|---:|
-| asli | ce | 0.591 | 0.645 | **+0.054** |
-| asli | selfcon | 0.493 | 0.598 | **+0.105** |
-| asli | supcon | 0.676 | 0.661 | -0.014 |
-| eq48 | ce | 0.744 | 0.721 | -0.024 |
-| eq48 | selfcon | 0.581 | 0.673 | **+0.093** |
-| eq48 | supcon | 0.792 | 0.769 | -0.022 |
-
-![gerbang kausal acak16](babak14_acak16.png)
-
-*Tiap garis satu kombinasi. Garis jingga naik: menghancurkan susunan tubuh
-justru MENAIKKAN AUC. Garis biru turun, tapi turunnya kecil - paling besar
--0.024.*
-
-Merusak susunan petak **tidak menurunkan** AUC; pada tiga dari enam kombinasi
-malah **menaikkannya**. Model yang benar-benar membaca bentuk dan posisi tubuh
-ayam seharusnya runtuh di sini. Ini mengkonfirmasi ulang temuan babak 10, kali
-ini di bawah protokol test yang jauh lebih ketat: **classifier membaca tekstur,
-bukan bentuk.**
-
-Ada satu pengecualian yang menarik. Pada **skor relatif** eq48+supcon, AP jatuh
-dari 0.216 ke 0.046 - komponen relatifnya jelas peka pada susunan. Sayangnya
-komponen relatif itu justru yang hasilnya lebih rendah daripada skor absolut
-(AP 0.223 vs 0.386). Jadi bagian yang benar-benar melihat bentuk adalah bagian
-yang paling lemah.
-
-> **Perumpamaan.** Kita curiga seseorang membaca buku atau cuma menghafal sampul.
-> Kita robek halamannya lalu acak urutannya, dan tanyakan lagi isinya. Kalau
-> jawabannya tetap benar - apalagi **lebih** benar - dia tidak pernah membaca
-> halamannya.
-
-### Kalau dipakai sungguhan hari ini
-
-Ambang `tau_val` dihitung murni dari validation, tidak pernah dari chick:
-
-| varian | metode | bacc | recall mati | spesifisitas | presisi mati | TP dari 22 | FP |
-|---|---|---:|---:|---:|---:|---:|---:|
-| asli | selfcon | 0.492 | 0.000 | 0.984 | 0.000 | 0.0 | 15.0 |
-| asli | ce | 0.528 | 0.121 | 0.935 | 0.039 | 2.7 | 59.7 |
-| asli | supcon | 0.533 | 0.091 | 0.975 | 0.032 | 2.0 | 23.3 |
-| eq48 | selfcon | 0.527 | 0.212 | 0.841 | 0.032 | 4.7 | 146.0 |
-| eq48 | ce | 0.648 | 0.333 | 0.963 | 0.203 | 7.3 | 34.0 |
-| eq48 | supcon | 0.723 | 0.576 | 0.870 | 0.105 | 12.7 | 120.0 |
-
-Yang terbaik menangkap 12.7 dari 22 ayam mati - dan menukarnya dengan 120 alarm
-palsu. **Sembilan dari sepuluh alarm keliru.** (Presisi 0.105 pada tabel adalah
-rata-rata presisi tiga seed; dihitung dari rata-rata TP dan FP nilainya 0.096 -
-keduanya bercerita sama.) Sebagai alat operasional, ini belum layak pakai.
-
-Audit crop `bukan ayam` menambah satu lapisan lagi. Dari 272 crop yang bukan
-ayam sama sekali, berapa yang ikut naik ke peringkat teratas:
-
-| varian | metode | top-1 | top-3 | top-5 |
-|---|---|---:|---:|---:|
-| asli | ce | 17.3 | 47.3 | 74.0 |
-| asli | selfcon | 16.0 | 46.0 | 73.3 |
-| asli | supcon | 4.3 | 15.7 | 25.7 |
-| eq48 | ce | 17.0 | 49.7 | 76.7 |
-| eq48 | selfcon | 17.0 | 48.0 | 74.3 |
-| eq48 | supcon | 5.7 | 23.3 | 38.3 |
-
-Batas teoretisnya 18 - satu peringkat-1 per frame. Jadi pada `ce` dan `selfcon`,
-**hampir setiap frame menaruh objek bukan-ayam di peringkat 1**. SupCon jauh
-lebih bersih (4.3 dan 5.7 dari 18), dan ini satu-satunya sisi di mana
-keunggulannya konsisten.
-
-### Apa yang boleh dan tidak boleh disimpulkan
-
-**Boleh disimpulkan:**
-
-1. Pipeline lengkap berjalan end-to-end di bawah protokol yang ketat: loss
-   tercatat tiap epoch, 18 run reproducible, registry ter-hash, test dibuka
-   sekali saja tanpa seleksi apa pun dari hasilnya.
-2. Ada urutan yang konsisten antar-pipeline - supcon > ce > selfcon, eq48 >
-   asli - dan urutan itu sama pada AP, AUC, Recall@3, dan MRR.
-3. Equalization 48 px membantu di test, bukan hanya di validation: AP eq48
-   supcon 0.386 vs asli 0.091, naik lebih dari empat kali lipat.
-
-**Tidak boleh disimpulkan:**
-
-1. **Tidak boleh** diklaim model mengenali ayam mati. Baseline saturasi tanpa
-   model mengalahkan seluruh 18 checkpoint pada AUC.
-2. **Tidak boleh** dikreditkan ke fungsi loss. Pada tiap diagonal, loss dan
-   augmentasi berubah bersamaan - ini perbandingan pipeline, bukan atribusi
-   kausal. (Masalah dua faktor dari babak 3 masih berlaku utuh.)
-3. **Tidak boleh** dibaca sebagai bukti membaca pose. Gerbang acak16 justru
-   menaikkan AUC pada tiga kombinasi.
-4. **Tidak boleh** disebut hasil konfirmatori. Chick adalah benchmark tetap
-   **retrospektif** - dataset itu sudah pernah dibaca pada eksperimen historis
-   proyek ini, dari babak 6 sampai babak 12. Protokol sekarang mencegah
-   kebocoran ke depan, tapi tidak bisa menghapus ingatan eksperimen yang sudah
-   terjadi.
-5. **Tidak boleh** dianggap cukup datanya. Hanya 98 crop mati di development dan
-   22 ayam mati di test. Satu ayam mati bernilai 4.5 poin recall.
-
-> **Perumpamaan untuk nomor 4.** Seorang guru menyegel soal ujian dan bersumpah
-> tidak memberitahukannya. Masalahnya, dia sudah pernah membahas soal itu di
-> kelas tahun lalu. Segelnya sah dan niatnya benar - tapi ujiannya tetap tidak
-> bisa disebut ujian pertama.
-
-### Kenapa babak ini tetap kemajuan
-
-Kalau dibaca dari angkanya saja, babak 14 kelihatan seperti kegagalan: model
-terbaik kalah dari satu angka warna. Tapi yang berubah hari ini bukan skornya -
-yang berubah adalah **kita sekarang tahu skornya jujur**.
-
-Bandingkan dengan babak 8. Waktu itu balanced accuracy 1.0000 terlihat seperti
-kemenangan besar, dan butuh dua babak penuh untuk menemukan bahwa angka itu
-palsu. Hari ini, angka 0.792 langsung datang bersama tiga hal yang
-membatalkannya: baseline yang mengalahkannya, gerbang kausal yang tidak dilewati,
-dan audit yang menunjukkan berapa banyak alarm yang salah sasaran.
-
-Menemukan kelemahan sendiri pada hari yang sama dengan hasilnya - itu yang tidak
-dimiliki sebelas babak sebelumnya.
-
-> **Perumpamaan.** Termometer yang rusak dan menunjukkan 36.5 derajat untuk
-> semua orang tidak berguna, walaupun angkanya enak dilihat. Termometer yang
-> menunjukkan 39 dan memang benar 39 jauh lebih berharga - meski beritanya buruk.
-> Babak 14 adalah hari kita berhenti memakai termometer yang pertama.
-
-### Yang dikerjakan berikutnya
-
-1. **Kejar baseline saturasi dulu.** Sebelum menambah metode apa pun, model harus
-   bisa mengalahkan AUC 0.883 dari satu angka warna. Kalau tidak bisa, menambah
-   pipeline hanya menambah biaya komputasi tanpa menambah pengetahuan.
-2. **Periksa kurva SupCon yang datar.** Perlu dipastikan apakah temperatur,
-   ukuran batch, atau jumlah positif per anchor membuat tahap contrastive-nya
-   praktis tidak belajar - dan kalau iya, apakah keunggulan SupCon di test
-   sebenarnya milik probe liniernya.
-3. **Cari sumber ayam mati kedua** dengan domain berbeda dari Roboflow. Selama
-   semua ayam mati berasal dari satu domain close-up, `label = domain` tidak akan
-   pernah bisa dipatahkan dari sisi data - dan ini akar yang sama dengan babak 8.
-4. **Benchmark prospektif**: frame CCTV baru yang belum pernah disentuh proyek
-   ini sama sekali, supaya klaim konfirmatori akhirnya mungkin.
-
-Catatan reproduksi:
-
-```bash
-sh run_dev_full.sh > outputs/logs/dev_full.log 2>&1
-python src/build_dev_registry.py
-python src/eval_fixed_chick.py --registries \
-    outputs/predictions/pio_dev_registry.json,outputs/predictions/pio_eq_dev_registry.json
-python src/report_fixed_chick.py
-python src/figur_babak14.py
-```
-
-Rincian protokol dan angka lengkapnya:
-[`pio_development_protocol.md`](pio_development_protocol.md),
-[`fixed_chick.md`](fixed_chick.md), dan
-[`update_14_september.md`](update_14_september.md).
-
----
-
-## Penutup: satu kalimat per babak
-
-1. Pipeline dua tahap dibangun - YOLO lalu classifier - supaya soal "di mana
-   ayamnya" dan "ayam ini mati atau hidup" bisa dinilai terpisah.
-2. Tiga metode kontrastif disiapkan dengan arsitektur dan data identik.
-3. Tiap metode diberi augmentasi dari paper aslinya, yang melahirkan
-   perbandingan 2 faktor - diatasi dengan menjalankan grid 3x3 penuh.
-4. **Ternyata mengukur ketajaman saja sudah mengalahkan semua model**, karena
-   crop ayam hidup lebih kecil lalu diperbesar.
-5. Val set jenuh di 1.0 dengan 14 ayam hidup, jadi tidak bisa dipakai memilih
-   apa pun.
-6. Di CCTV sesungguhnya: **deteksi 100%, klasifikasi 0.65** - hambatannya di
-   classifier.
-7. Penyebab deteksi awal yang gagal ternyata `imgsz: 960` - arahnya terbalik
-   dari dugaan; diperbaiki ke 640, recall 36% -> 100%.
-8. Latihan dengan PIO memberi **bacc 1.0000 yang palsu**, karena PIO satu kelas
-   sehingga label menjadi identik dengan domain kamera.
-9. **Ada kekeliruan** menyimpulkan sebab dari korelasi; diganti dengan uji
-   intervensi, dan kekeliruannya ditulis ke dalam kode.
-10. **Temuan terbesar: tidak satu pun dari 18 checkpoint membaca bentuk ayam** -
-    bentuknya dihancurkan, skornya tidak turun.
-11. Terhadap acuan yang benar, **tidak ada satu pun dari tiga susunan data yang
-    terbukti lebih baik** - persis yang diperkirakan kalau tidak ada yang
-    membaca bentuk.
-12. Skor anomali relatif satu-frame mulai membaca susunan/bentuk, tetapi belum
-    konsisten mengungguli classifier absolut; berikutnya wajib diuji melawan
-    classifier biasa yang dilatih langsung pada domain chick.
-13. Batas data dikunci: chick khusus test, train/validation dari PIO +
-    Roboflow, dan loss wajib tercatat tiap epoch - rencana melatih di chick
-    dibatalkan.
-14. **Laci dibuka**: 18 run selesai, registry dibekukan, test dijalankan sekali.
-    Hasil terbaik AUC 0.792 - **kalah dari saturasi tanpa model, 0.883** - dan
-    gerbang acak16 justru menaikkan AUC pada tiga kombinasi.
-
-**Langkah berikutnya yang akan bergerak:** mengalahkan baseline saturasi
-(AUC 0.883) sebelum menambah metode apa pun, dan memeriksa kenapa kurva SupCon
-nyaris tidak bergerak dalam 60 epoch. Batas datanya tetap keras: hanya 22 ayam
-mati dari 18 frame, sehingga hasil apa pun harus dibaca sebagai bukti awal.
+## Lanjutannya
+
+Cerita berlanjut di dokumen kedua:
+**[`kronologi lengkap 2.md`](kronologi%20lengkap%202.md)** - *Hari Laci Dibuka*.
+
+Isinya babak 14: 18 run pelatihan, registry yang dibekukan dan di-hash sebelum
+test disentuh, angka benchmark `chick` yang pertama, gerbang kausal `acak16`,
+dan tiga figur baru. Ringkasnya - pipeline terbaik mencapai AP 0.386 / AUC
+0.792, tetapi baseline saturasi tanpa model mencapai AUC 0.883 dan tidak satu
+pun dari 18 checkpoint melewatinya.
