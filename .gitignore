@@ -65,3 +65,15 @@ data/label_chick/cek_ulang/bukan/
 # Peta jalan lintas sesi/agen - bebas diubah, bukan bagian hasil.
 # Laporan resminya ada di outputs/reports/kronologi_lengkap.md
 tujuan.md
+
+# Run development PIO + Roboflow (checkpoint besar, dibuat ulang)
+outputs/runs_pio_dev/
+outputs/runs_pio_eq_dev/
+data/crops_pio_dev/alive/
+
+data/crops_pio_dev/dead/
+data/crops_pio_eq_dev/alive/
+data/crops_pio_eq_dev/dead/
+
+# Worktree agent Claude Code (bukan bagian hasil)
+.claude/

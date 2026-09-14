@@ -139,18 +139,21 @@ def main():
             name + mark, ">=" if sign > 0 else "<=", btr, cells, ""))
         out["features"][name] = rec
 
-    sharp, side, y = (f["test"][0][:, 0], f["test"][0][:, 6], f["test"][1])
-    print(f"\n  test n={len(y)}  "
+    report_split = "test" if "test" in f else "val"
+    sharp, side, y = (f[report_split][0][:, 0], f[report_split][0][:, 6],
+                      f[report_split][1])
+    print(f"\n  {report_split} n={len(y)}  "
           f"mati: sisi {np.median(side[y == 1]):>5.0f}px "
           f"tajam {np.median(sharp[y == 1]):>6.0f}   "
           f"hidup: sisi {np.median(side[y == 0]):>5.0f}px "
           f"tajam {np.median(sharp[y == 0]):>6.0f}")
 
-    vis = [(n, out["features"][n]["test_auc"]) for n, v in FEATURES if v]
+    vis = [(n, out["features"][n][f"{report_split}_auc"])
+           for n, v in FEATURES if v]
     top, top_auc = max(vis, key=lambda r: r[1])
     print(f"\n  AUC-terarah 0.5 = ciri ini tidak memberi informasi apa pun.")
     print(f"  Jalan pintas terkuat yang TERLIHAT di piksel: {top} "
-          f"(test AUC-terarah {top_auc:.4f}).")
+          f"({report_split} AUC-terarah {top_auc:.4f}).")
     print("  Classifier harus melewati angka itu dulu sebelum skornya boleh "
           "dibaca\n  sebagai kemampuan mengenali ayam mati.")
     print("  * = dihitung dari manifest, bukan dari piksel crop.")

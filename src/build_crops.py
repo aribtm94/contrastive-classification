@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import random
 import re
@@ -306,6 +307,8 @@ def build(cfg: dict) -> dict:
 
     rows = balance_and_split(rows, cfg)
     write_manifest(rows, cfg)
+    if cfg.get("protocol", {}).get("development_only"):
+        write_or_validate_split_lock(rows, cfg)
     if ccfg.get("save_review_grid", True):
         save_review_grid(rows, cfg)
     return summarize(rows, skipped, resolve(ccfg["manifest"]))
@@ -358,28 +361,47 @@ def balance_and_split(rows: list[dict], cfg: dict) -> list[dict]:
 
     # Split DISTRATIFIKASI per kelas. Kalau base image diacak begitu saja,
     # sumber hidup dan mati yang terpisah total (PIO vs close-up) bisa jatuh
-    # ke satu sisi - terbukti: val dan test pernah kehilangan kelas 'hidup'
-    # seluruhnya. Tiap kelas karena itu dibagi sendiri lalu digabung.
-    tr, va, _ = ccfg["split_ratio"]
+    # ke satu sisi. Tiap kelas karena itu dibagi sendiri lalu digabung.
+    #
+    # Konfigurasi historis memakai train/val/test. Protokol development baru
+    # hanya memakai train/val karena satu-satunya test adalah dataset chick.
+    split_names = list(ccfg.get("split_names", ["train", "val", "test"]))
+    ratios = [float(x) for x in ccfg["split_ratio"]]
+    if len(split_names) not in (2, 3) or len(ratios) != len(split_names):
+        raise ValueError("split_names/split_ratio harus berisi 2 atau 3 elemen")
+    if split_names[:2] != ["train", "val"]:
+        raise ValueError("dua split pertama wajib train dan val")
+    if abs(sum(ratios) - 1.0) > 1e-6:
+        raise ValueError("jumlah split_ratio harus 1.0")
+
     label_of = {}
     for r in rows:
-        label_of.setdefault(r["base_image"], r["label"])
+        old_label = label_of.setdefault(r["base_image"], r["label"])
+        if old_label != r["label"]:
+            raise ValueError(f"satu base_image punya dua label: {r['base_image']}")
 
     assign = {}
     for lab in sorted({r["label"] for r in rows}):
         bl = sorted({b for b, v in label_of.items() if v == lab})
         rng.shuffle(bl)
         n = len(bl)
-        if n < 3:
-            # terlalu sedikit untuk dibagi tiga; semuanya jadi data latih
-            for b in bl:
-                assign[b] = "train"
-            continue
-        n_tr = min(int(round(n * tr)), n - 2)     # sisakan minimal 1 val 1 test
-        n_va = max(1, min(int(round(n * va)), n - n_tr - 1))
-        for i, b in enumerate(bl):
-            assign[b] = ("train" if i < n_tr
-                         else ("val" if i < n_tr + n_va else "test"))
+        if len(split_names) == 2:
+            if n < 2:
+                raise ValueError(f"kelas {lab} tidak cukup untuk train/val")
+            n_tr = max(1, min(int(round(n * ratios[0])), n - 1))
+            for i, b in enumerate(bl):
+                assign[b] = "train" if i < n_tr else "val"
+        else:
+            if n < 3:
+                for b in bl:
+                    assign[b] = "train"
+                continue
+            n_tr = min(int(round(n * ratios[0])), n - 2)
+            n_va = max(1, min(int(round(n * ratios[1])), n - n_tr - 1))
+            for i, b in enumerate(bl):
+                assign[b] = ("train" if i < n_tr
+                             else ("val" if i < n_tr + n_va
+                                   else split_names[2]))
 
     for r in rows:
         r["split"] = assign[r["base_image"]]
@@ -387,8 +409,8 @@ def balance_and_split(rows: list[dict], cfg: dict) -> list[dict]:
     from collections import Counter as _C
     cnt = _C((r["split"], r["label_name"]) for r in rows)
     print(f"[crops] {len(assign)} gambar asal dibagi per kelas -> " + ", ".join(
-        f"{s}: hidup {cnt[(s, 'alive')]} / mati {cnt[(s, 'dead')]}"
-        for s in ("train", "val", "test")))
+        f"{sp}: hidup {cnt[(sp, 'alive')]} / mati {cnt[(sp, 'dead')]}"
+        for sp in split_names))
     return rows
 
 
@@ -403,6 +425,69 @@ def write_manifest(rows: list[dict], cfg: dict) -> None:
         for r in sorted(rows, key=lambda x: (x["split"], x["label"], x["path"])):
             w.writerow({c: (json.dumps(r[c]) if c == "bbox" else r.get(c, ""))
                         for c in cols})
+
+
+def _sha256(path: Path) -> str:
+    """SHA-256 berkas untuk mengikat manifest ke protokol."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def write_or_validate_split_lock(rows: list[dict], cfg: dict) -> None:
+    """Bekukan pembagian base_image development PIO hidup + Roboflow mati."""
+    protocol = cfg["protocol"]
+    lock_path = resolve(protocol["split_lock"])
+    manifest = resolve(cfg["crops"]["manifest"])
+    split_names = list(cfg["crops"]["split_names"])
+
+    mapping = {}
+    for r in rows:
+        old_split = mapping.setdefault(r["base_image"], r["split"])
+        if old_split != r["split"]:
+            raise ValueError(f"base_image bocor antar split: {r['base_image']}")
+
+    counts = {}
+    for sp in split_names:
+        alive = sum(r["split"] == sp and r["label"] == 0 for r in rows)
+        dead = sum(r["split"] == sp and r["label"] == 1 for r in rows)
+        counts[sp] = {"alive": alive, "dead": dead, "total": alive + dead}
+    expected = protocol.get("expected_counts") or {}
+    if expected and counts != expected:
+        raise ValueError(f"jumlah development berubah: {counts} != {expected}")
+
+    try:
+        manifest_name = str(manifest.relative_to(resolve("."))).replace("\\", "/")
+    except ValueError:
+        manifest_name = str(manifest)
+    payload = {
+        "schema_version": 1,
+        "purpose": "development_only_pio_alive_roboflow_dead",
+        "seed": int(cfg["seed"]),
+        "manifest": manifest_name,
+        "manifest_sha256": _sha256(manifest),
+        "counts": counts,
+        "n_base_images": len(mapping),
+        "base_image_to_split": dict(sorted(mapping.items())),
+        "test_dataset_excluded": "C:/Arib/CCTV/patnet-pure/dataset/chick",
+    }
+
+    if lock_path.exists():
+        with open(lock_path, encoding="utf-8") as f:
+            current = json.load(f)
+        comparable = ("seed", "counts", "n_base_images", "base_image_to_split")
+        diffs = [k for k in comparable if current.get(k) != payload.get(k)]
+        if diffs:
+            raise ValueError(f"split lock berubah pada {diffs}: {lock_path}")
+        if current.get("manifest_sha256") != payload["manifest_sha256"]:
+            raise ValueError(f"hash manifest tidak cocok dengan split lock: {lock_path}")
+        print(f"[crops] split lock          : cocok ({lock_path})")
+        return
+
+    save_json(payload, lock_path)
+    print(f"[crops] split lock          : dibuat ({lock_path})")
 
 
 def save_review_grid(rows: list[dict], cfg: dict, per_class: int = 24) -> None:
@@ -447,7 +532,10 @@ def summarize(rows: list[dict], skipped: Counter, manifest: Path) -> dict:
     print(f"{'split':<8}{'hidup':>8}{'mati':>8}{'total':>8}")
 
     stats = {}
-    for sp in ["train", "val", "test"]:
+    present = {r["split"] for r in rows}
+    split_names = [sp for sp in ("train", "val", "test") if sp in present]
+    split_names += sorted(present - set(split_names))
+    for sp in split_names:
         a = sum(1 for r in rows if r["split"] == sp and r["label"] == 0)
         d = sum(1 for r in rows if r["split"] == sp and r["label"] == 1)
         stats[sp] = {"alive": a, "dead": d, "total": a + d}

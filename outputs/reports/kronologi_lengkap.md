@@ -1304,3 +1304,34 @@ berasal dari perbandingan relatif atau semata-mata dari data satu-domain.
 domain-chick dengan leave-one-frame-out. Sesudah kontrol itu barulah ranking
 loss satu-frame dapat dinilai secara adil. Batas datanya tetap keras: hanya 22
 ayam mati dari 18 frame, sehingga hasil apa pun harus dibaca sebagai bukti awal.
+
+---
+
+## Babak 13 - batas data dari dosen dan kurva loss per epoch
+
+Rencana melatih classifier langsung pada 943 crop valid chick tidak dilanjutkan.
+Sesuai arahan dosen, ayam/chick tetap khusus test, sementara train dan validation
+tetap memakai PIO + Roboflow:
+
+- hidup: PIO (`pio_gt`, domain CCTV);
+- mati: Roboflow `dead-chikens` (`coco_gt`, domain close-up);
+- test: seluruh 18 frame ayam/chick, tidak masuk optimisasi atau seleksi model.
+
+Split development dua-arah dikunci per gambar asal: train 179 hidup + 58 mati,
+validation 115 hidup + 40 mati. Split internal lama bukan lagi test; baris itu
+digabung ke validation. Kode training mode development tidak membaca split test.
+
+Permintaan pengukuran loss diterapkan pada setiap epoch: NT-Xent/SupCon untuk
+tahap contrastive, dan weighted CE untuk probe serta baseline CE. Masing-masing
+punya train loss, validation loss, learning rate, jumlah unit, dan metrik
+validation. Validation contrastive memakai two-view tetap supaya kurvanya dapat
+dibandingkan antar-epoch.
+
+Keterbatasannya tetap besar dan ditulis terbuka: label development masih identik
+dengan domain. Baseline validation tanpa model menemukan hue AUC-terarah sekitar
+0.92 dan ukuran bbox metadata sekitar 0.99. Maka skor validation tinggi tidak
+boleh dibaca sebagai bukti pengenalan kondisi ayam. Dataset chick juga sudah
+dilihat pada eksperimen historis, sehingga hasil berikutnya adalah benchmark
+test tetap retrospektif, bukan uji konfirmatori prospektif.
+
+Protokol rinci: [`pio_development_protocol.md`](pio_development_protocol.md).

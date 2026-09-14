@@ -27,6 +27,7 @@ from build_crops import equalize
 from common import get_device, imread, resolve, save_json, to_square
 from dataset import to_tensor
 from models import build_model
+from intervensi import acak_petak
 from train import pick_threshold, roc_auc
 
 
@@ -101,17 +102,8 @@ def load_rows(labels_path: Path, crops_dir: Path) -> list[dict]:
 
 
 def shuffle_tiles(image: np.ndarray, nomor: int, seed: int, n: int = 4):
-    """Acak petak deterministik; setiap checkpoint melihat gambar yang sama."""
-    h, w = image.shape[:2]
-    hs, ws = h // n, w // n
-    tiles = [image[i * hs:(i + 1) * hs, j * ws:(j + 1) * ws].copy()
-             for i in range(n) for j in range(n)]
-    out = image.copy()
-    rng = np.random.default_rng(seed + nomor * 1009)
-    for k, source in enumerate(rng.permutation(len(tiles))):
-        i, j = divmod(k, n)
-        out[i * hs:(i + 1) * hs, j * ws:(j + 1) * ws] = tiles[source]
-    return out
+    """Kompatibilitas lama menuju intervensi shared yang menutup semua piksel."""
+    return acak_petak(image, nomor, seed=seed, n=n)
 
 
 def prepare_images(rows: list[dict], cfg: dict, intervention: str,

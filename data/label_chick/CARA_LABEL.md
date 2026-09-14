@@ -55,11 +55,11 @@ crop apa adanya. Keduanya jujur, asal disebut yang mana.
 
 **Jangan melabeli sambil melihat skor model.** Kalau ragu, tandai `bukan`.
 
-**18 gambar ini juga satu-satunya alat ukur yang ada.** Kalau semuanya dipakai
-melatih, tidak tersisa apa pun untuk menguji. Rencana pembagiannya: sebagian
-gambar untuk latih, sisanya **tidak disentuh sama sekali** sampai akhir -
-dibagi per **gambar sumber**, bukan per crop, supaya ayam yang sama tidak
-muncul di dua sisi.
+**18 gambar ini tetap khusus untuk test.** Sesuai arahan dosen, tidak satu pun
+crop, mask, atau label ayam/chick masuk train maupun validation. Development
+memakai ayam hidup PIO dan ayam mati Roboflow, dibagi per gambar sumber. Karena
+benchmark ini sudah pernah dipakai pada eksperimen historis, hasil berikutnya
+disebut evaluasi retrospektif, bukan holdout prospektif yang benar-benar buta.
 
 ## Sesudah selesai
 

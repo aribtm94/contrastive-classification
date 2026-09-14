@@ -1,0 +1,68 @@
+{
+  "crops": "data/crops_pio_dev",
+  "features": {
+    "ketajaman": {
+      "threshold": 392.00890855221195,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.9578597572722019,
+      "val_bacc": 0.817391304347826,
+      "val_auc_raw": 0.8778260869565218,
+      "val_auc": 0.8778260869565218
+    },
+    "rasio_bbox": {
+      "threshold": 1.2831858407079646,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.6071566172221152,
+      "val_bacc": 0.4635869565217391,
+      "val_auc_raw": 0.40576086956521745,
+      "val_auc": 0.5942391304347825
+    },
+    "saturasi": {
+      "threshold": 40.548848054846935,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.7188884607975342,
+      "val_bacc": 0.6875,
+      "val_auc_raw": 0.7658695652173914,
+      "val_auc": 0.7658695652173914
+    },
+    "terang": {
+      "threshold": 106.00769292091837,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.5746484299749567,
+      "val_bacc": 0.5934782608695652,
+      "val_auc_raw": 0.5167391304347826,
+      "val_auc": 0.5167391304347826
+    },
+    "hue": {
+      "threshold": 24.631895727040817,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.7281352340589482,
+      "val_bacc": 0.5994565217391304,
+      "val_auc_raw": 0.08652173913043477,
+      "val_auc": 0.9134782608695652
+    },
+    "std_terang": {
+      "threshold": 41.74646237457602,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.611009439414371,
+      "val_bacc": 0.4315217391304348,
+      "val_auc_raw": 0.358695652173913,
+      "val_auc": 0.6413043478260869
+    },
+    "ukuran_bbox": {
+      "threshold": 97.5,
+      "sign": 1,
+      "from_pixels": false,
+      "train_bacc": 0.9047871315738778,
+      "val_bacc": 0.8353260869565218,
+      "val_auc_raw": 0.9852173913043478,
+      "val_auc": 0.9852173913043478
+    }
+  }
+}

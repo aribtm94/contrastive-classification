@@ -14,6 +14,22 @@ Contrastive, dan Cross-Entropy biasa.
 
 ---
 
+## Protokol eksperimen aktif
+
+Sesuai arahan dosen, eksperimen lanjutan memakai **PIO + Roboflow hanya untuk
+train dan validation**, sedangkan seluruh dataset ayam/chick tetap menjadi
+test. Train/validation berisi ayam hidup PIO dan ayam mati Roboflow; akibatnya
+`label = domain` masih menjadi keterbatasan yang wajib dibaca bersama hasil.
+Data ayam/chick tidak dipakai memilih epoch, threshold, seed, atau checkpoint.
+
+Training baru mencatat **train loss dan validation loss pada setiap epoch**
+untuk NT-Xent, SupCon, dan weighted CE. Protokol lengkap ada di
+[`outputs/reports/pio_development_protocol.md`](outputs/reports/pio_development_protocol.md).
+Karena chick sudah dipakai pada eksperimen historis, hasilnya disebut benchmark
+test tetap retrospektif, bukan holdout prospektif yang benar-benar buta.
+
+---
+
 ## Alur pipeline
 
 ```

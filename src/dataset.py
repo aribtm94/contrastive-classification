@@ -18,6 +18,8 @@ Kenapa dua view?
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import random
 import zlib
 
@@ -444,6 +446,69 @@ def read_manifest(cfg: dict, split: str | None = None) -> list[dict]:
     return rows
 
 
+def _sha256(path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def validate_development_manifest(cfg: dict) -> dict:
+    """Tolak training jika kontrak PIO+Roboflow atau split lock berubah."""
+    protocol = cfg.get("protocol", {})
+    if not protocol.get("development_only"):
+        return {}
+    if cfg["crops"].get("alive_source") != "pio":
+        raise ValueError("protokol development hanya menerima alive_source=pio")
+
+    path = resolve(cfg["crops"]["manifest"])
+    lock_path = resolve(protocol["split_lock"])
+    if not lock_path.exists():
+        raise FileNotFoundError(f"split lock belum ada: {lock_path}")
+    with open(lock_path, encoding="utf-8") as f:
+        lock = json.load(f)
+    if lock.get("manifest_sha256") != _sha256(path):
+        raise ValueError("hash manifest tidak cocok dengan split lock")
+
+    rows = read_manifest(cfg)
+    allowed_splits = {"train", "val"}
+    splits = {r["split"] for r in rows}
+    if splits != allowed_splits:
+        raise ValueError(f"development hanya boleh train+val, ditemukan {splits}")
+    seen = {}
+    for r in rows:
+        # Jangan periksa `abspath`: nama root repo sendiri memuat kata
+        # "chicken". Yang dilarang adalah provenance baris dari benchmark.
+        provenance = " ".join(str(r.get(k, "")).lower()
+                              for k in ("path", "src_file", "base_image"))
+        if "chick (" in provenance or "ayam (" in provenance:
+            raise ValueError("dataset chick ditemukan di manifest development")
+        expected = (("pio_gt", "cctv") if r["label"] == 0
+                    else ("coco_gt", "closeup"))
+        actual = (r.get("origin"), r.get("domain"))
+        if actual != expected:
+            raise ValueError(f"provenance tidak cocok: {r['path']} {actual}")
+        old = seen.setdefault(r["base_image"], r["split"])
+        if old != r["split"]:
+            raise ValueError(f"base_image bocor antar split: {r['base_image']}")
+
+    counts = {}
+    for sp in ("train", "val"):
+        alive = sum(r["split"] == sp and r["label"] == 0 for r in rows)
+        dead = sum(r["split"] == sp and r["label"] == 1 for r in rows)
+        counts[sp] = {"alive": alive, "dead": dead, "total": alive + dead}
+        if alive == 0 or dead == 0:
+            raise ValueError(f"split {sp} kehilangan satu kelas")
+    expected_counts = protocol.get("expected_counts") or {}
+    if expected_counts and counts != expected_counts:
+        raise ValueError(f"jumlah manifest berubah: {counts} != {expected_counts}")
+    if lock.get("base_image_to_split") != dict(sorted(seen.items())):
+        raise ValueError("mapping base_image tidak cocok dengan split lock")
+    return {"counts": counts, "n_base_images": len(seen),
+            "manifest_sha256": lock["manifest_sha256"]}
+
+
 class _Base(Dataset):
     def __init__(self, rows: list[dict], cfg: dict, seed: int = 42,
                  policy: dict | None = None):
@@ -531,10 +596,7 @@ class TwoViewDataset(_Base):
 
 
 def class_weights(rows: list[dict]) -> torch.Tensor:
-    """
-    Bobot kelas untuk menangani ketimpangan jumlah (mati jauh lebih banyak
-    daripada hidup). Bobot = N / (jumlah_kelas * n_kelas_itu).
-    """
+    """Bobot kelas untuk ketimpangan dua kelas, apa pun kelas mayoritasnya."""
     n0 = sum(1 for r in rows if r["label"] == 0)
     n1 = sum(1 for r in rows if r["label"] == 1)
     n = n0 + n1

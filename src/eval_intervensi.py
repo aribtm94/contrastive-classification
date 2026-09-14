@@ -52,8 +52,7 @@ import numpy as np
 from common import (get_device, imread, load_config, resolve, save_json,
                     to_square)
 from pipeline import classify_crops, load_classifier
-
-_rng = np.random.default_rng(0)
+from intervensi import acak_petak
 
 
 def t_asli(im):
@@ -76,17 +75,9 @@ def t_kabur(im):
     return cv2.GaussianBlur(im, (0, 0), 4.0)
 
 
-def t_acak(im, n=4):
-    """Pecah n x n petak lalu acak - bentuk mati, tekstur tersisa."""
-    h, w = im.shape[:2]
-    hs, ws = h // n, w // n
-    petak = [im[i * hs:(i + 1) * hs, j * ws:(j + 1) * ws].copy()
-             for i in range(n) for j in range(n)]
-    out = im.copy()
-    for k, idx in enumerate(_rng.permutation(len(petak))):
-        i, j = divmod(k, n)
-        out[i * hs:(i + 1) * hs, j * ws:(j + 1) * ws] = petak[idx]
-    return out
+def t_acak(im, sample_id=0, n=4):
+    """Acak petak deterministik, tanpa strip sisa atau fixed point."""
+    return acak_petak(im, sample_id, seed=20260913, n=n)
 
 
 PERLAKUAN = [("asli", t_asli), ("abu", t_abu), ("hue+26", t_hue),
@@ -158,7 +149,8 @@ def main():
             continue
         row, rec = "", {}
         for nama, fn in PERLAKUAN:
-            crops = [to_square(fn(im), size, mode) for im in imgs]
+            crops = [to_square(t_acak(im, i) if nama == "acak16" else fn(im),
+                               size, mode) for i, im in enumerate(imgs)]
             _l, p = classify_crops(model, crops, cfg, dev)
             p = np.asarray(p)
             p = p[:, 1] if p.ndim > 1 else p
