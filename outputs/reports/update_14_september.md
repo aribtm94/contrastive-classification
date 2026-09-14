@@ -19,7 +19,7 @@ pipeline ini belum terbukti mengenali kondisi ayam.
 
 ---
 
-## 2. Perubahan arah: batas data dari dosen (13 Sept)
+## 2. Perubahan arah: batas data (13 Sept)
 
 Rencana lama - melatih classifier langsung pada 943 crop chick dengan
 leave-one-frame-out - **dibatalkan**. Batas data yang sekarang berlaku:
@@ -34,10 +34,10 @@ Crop, label manual, dan mask chick **tidak menyentuh** training, validation,
 early stopping, threshold, atau pemilihan model. Split internal lama yang
 bernama `test` dihapus perannya dan barisnya digabung ke validation.
 
-Permintaan kedua dari dosen: **train loss dan validation loss dicatat pada
+Permintaan kedua : **train loss dan validation loss dicatat pada
 setiap epoch** - sudah berjalan, lihat bagian 4.
 
-Perumpamaan untuk dosen: dulu kita ikut menyusun soal ujiannya sendiri, sekarang
+Perumpamaan : dulu kita ikut menyusun soal ujiannya sendiri, sekarang
 soal ujian dikunci di laci; kunci lacinya baru dibuka hari ini, setelah semua
 jawaban dikumpulkan.
 
@@ -112,7 +112,7 @@ perbaikan.
 
 ---
 
-## 4. Loss per epoch - permintaan dosen
+## 4. Loss per epoch
 
 Tercatat tiap epoch untuk setiap tahap: train loss, validation loss, loss dasar,
 aux CE, learning rate yang dipakai, learning rate sesudah scheduler, jumlah
@@ -310,8 +310,8 @@ atas, walau urutan keseluruhannya lebih buruk.
 
 **Boleh:**
 
-1. Pipeline lengkap berjalan end-to-end di bawah protokol yang ketat: batas data
-   dosen dipatuhi, loss tercatat tiap epoch, 18 run reproducible, registry
+1. Pipeline lengkap berjalan end-to-end di bawah protokol yang ketat: 
+   loss tercatat tiap epoch, 18 run reproducible, registry
    ter-hash, test dibuka sekali saja tanpa seleksi apa pun dari hasilnya.
 2. Ada urutan yang konsisten antar-pipeline: supcon > ce > selfcon, dan eq48 >
    asli. Urutan ini sama pada AP, AUC, Recall@3, dan MRR.
