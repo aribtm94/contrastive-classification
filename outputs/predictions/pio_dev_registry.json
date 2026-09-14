@@ -1,0 +1,579 @@
+{
+  "schema_version": 1,
+  "experiment": "pio_roboflow_development",
+  "test_policy": "fixed_retrospective_chick_test_only",
+  "data_contract": {
+    "alive": "PIO/pio_gt/cctv",
+    "dead": "Roboflow/coco_gt/closeup",
+    "train_validation_only": true,
+    "label_equals_domain_limitation": true,
+    "test_root": "C:/Arib/CCTV/patnet-pure/dataset/chick",
+    "test_counts": {
+      "total": 1215,
+      "dead": 22,
+      "alive": 921,
+      "bukan": 272,
+      "frames": 18
+    }
+  },
+  "config": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\configs\\config_pio_dev.yaml",
+  "config_sha256": "fe6f7d862d54a6aec0f142e1d6e1131ab4b591aa39931a633964175bc4e0ceaf",
+  "config_snapshot": {
+    "seed": 42,
+    "device": "auto",
+    "protocol": {
+      "development_only": true,
+      "expected_counts": {
+        "train": {
+          "alive": 179,
+          "dead": 58,
+          "total": 237
+        },
+        "val": {
+          "alive": 115,
+          "dead": 40,
+          "total": 155
+        }
+      },
+      "split_lock": "data/crops_pio_dev/dev_split_lock.json",
+      "history_csv": "outputs/reports/pio_dev_history.csv",
+      "registry": "outputs/predictions/pio_dev_registry.json",
+      "shortcut_json": "outputs/predictions/pio_dev_shortcut.json",
+      "validation_seed_offset": 900001
+    },
+    "detection": {
+      "weights": "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/runs_compare/cmp_yolov8m/weights/best.pt",
+      "imgsz": 640,
+      "conf": 0.25,
+      "iou": 0.7,
+      "max_det": 300,
+      "test_images": null
+    },
+    "crops": {
+      "dead_root": "C:/Arib/MASSA AYAM/Pretrained method vs trained objek/repro/data/dead-chikens",
+      "splits": [
+        "train",
+        "valid",
+        "test"
+      ],
+      "out_dir": "data/crops_pio_dev",
+      "manifest": "data/crops_pio_dev/manifest.csv",
+      "alive_source": "pio",
+      "alive_detector": "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/yolov8m.pt",
+      "alive_detector_class": 14,
+      "alive_detector_imgsz": 640,
+      "alive_min_conf": 0.25,
+      "alive_min_box": 48,
+      "alive_max_iou_with_dead": 0.01,
+      "pio_images": "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/_pio_yolo/images/train",
+      "pio_labels": "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/_pio_yolo/labels/train",
+      "pio_max_crops": 300,
+      "pio_max_per_image": 12,
+      "equalize_resolution": {
+        "enabled": false,
+        "target_short_side": 96
+      },
+      "bbox_padding": 0.1,
+      "min_box_size": 16,
+      "max_alive_per_dead": 3.0,
+      "split_by_base_image": true,
+      "split_names": [
+        "train",
+        "val"
+      ],
+      "split_ratio": [
+        0.6,
+        0.4
+      ],
+      "save_review_grid": false
+    },
+    "classifier": {
+      "image_size": 224,
+      "resize_mode": "letterbox",
+      "backbone": "resnet18",
+      "pretrained": true,
+      "feature_dim": 512,
+      "proj_dim": 128,
+      "proj_hidden": 512,
+      "batch_size": 32,
+      "num_workers": 0,
+      "temperature": 0.07,
+      "epochs_contrastive": 60,
+      "lr_contrastive": 0.0005,
+      "epochs_probe": 40,
+      "lr_probe": 0.001,
+      "epochs_ce": 60,
+      "lr_ce": 0.0001,
+      "weight_decay": 0.0001,
+      "class_weighting": true,
+      "supcon_ce_weight": 0.0,
+      "early_stop_patience": 15
+    },
+    "augmentation": {
+      "by_method": {
+        "selfcon": {
+          "contrastive": "simclr",
+          "head": "minimal"
+        },
+        "supcon": {
+          "contrastive": "stacked_randaug",
+          "head": "minimal"
+        },
+        "ce": {
+          "contrastive": null,
+          "head": "hier_addone"
+        }
+      },
+      "lock_probe_policy": true,
+      "preview_views": 6,
+      "preview_samples": 4,
+      "policies": {
+        "none": {
+          "ops": []
+        },
+        "minimal": {
+          "ops": [
+            {
+              "op": "hflip",
+              "p": 0.5
+            }
+          ]
+        },
+        "legacy": {
+          "ops": [
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "rrc_iso",
+              "p": 0.7,
+              "scale": [
+                0.7,
+                1.0
+              ]
+            },
+            {
+              "op": "bright_contrast",
+              "p": 0.8,
+              "alpha": [
+                0.7,
+                1.3
+              ],
+              "beta": [
+                -30,
+                30
+              ]
+            },
+            {
+              "op": "hsv",
+              "p": 0.5,
+              "sat": [
+                0.6,
+                1.4
+              ],
+              "hue": [
+                -8,
+                8
+              ]
+            },
+            {
+              "op": "gray",
+              "p": 0.2
+            },
+            {
+              "op": "blur",
+              "p": 0.3,
+              "kernel": [
+                3,
+                5
+              ]
+            }
+          ]
+        },
+        "simclr": {
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ]
+            },
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "color_jitter",
+              "p": 0.8,
+              "strength": 1.0
+            },
+            {
+              "op": "gray",
+              "p": 0.2
+            },
+            {
+              "op": "blur",
+              "p": 0.5,
+              "kernel_frac": 0.1,
+              "sigma": [
+                0.1,
+                2.0
+              ]
+            }
+          ]
+        },
+        "stacked_randaug": {
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ]
+            },
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "randaug",
+              "p": 1.0,
+              "n": 2,
+              "magnitude": 9,
+              "stacked": true
+            }
+          ]
+        },
+        "hier_addone": {
+          "level_sampling": true,
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ],
+              "level": 0
+            },
+            {
+              "op": "color_jitter",
+              "p": 0.8,
+              "strength": 1.0,
+              "level": 1
+            },
+            {
+              "op": "gray",
+              "p": 0.2,
+              "level": 2
+            },
+            {
+              "op": "blur",
+              "p": 0.5,
+              "kernel_frac": 0.1,
+              "sigma": [
+                0.1,
+                2.0
+              ],
+              "level": 3
+            },
+            {
+              "op": "hflip",
+              "p": 0.5,
+              "level": 4
+            }
+          ]
+        }
+      }
+    },
+    "output": {
+      "runs_dir": "outputs/runs_pio_dev",
+      "reports_dir": "outputs/reports",
+      "predictions_dir": "outputs/predictions"
+    },
+    "methods": {
+      "selfcon": "Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe",
+      "supcon": "Supervised Contrastive - label hidup & mati digabung dalam loss",
+      "ce": "Klasifikasi biasa (Cross-Entropy) - baseline"
+    }
+  },
+  "manifest": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\data\\crops_pio_dev\\manifest.csv",
+  "manifest_sha256": "13965814d3ed4dbfdb3be69cc16cede6f0280d87d92852cc8d774744979ba271",
+  "split_lock": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\data\\crops_pio_dev\\dev_split_lock.json",
+  "split_lock_sha256": "da57958855004d50dabab0aa741cb721bfed03b7044a482d12053f7fe92870eb",
+  "shortcut_baseline": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\predictions\\pio_dev_shortcut.json",
+  "shortcut_baseline_sha256": "98cf328166f1d7a9d84c4cd8da8487095d662a1b2a53352c4f286bc8ae40096b",
+  "runtime": {
+    "python": "3.10.6",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "torch": "2.6.0+cu124",
+    "torchvision": "0.21.0+cu124",
+    "cuda_runtime": "12.4",
+    "cudnn": 90100,
+    "device": "cuda",
+    "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "git_commit": "a8994edc78a7a91ffbacd8d0203f5b87c8af2143",
+    "git_dirty": true
+  },
+  "source_sha256": {
+    "src/train.py": "3d32495e73b870b74df24f4a071095c7c669ddaefb337f8ccd90ebce00843af7",
+    "src/dataset.py": "6be3726689348cac5e6df522972991ee01f83df8d4911bc700b2740022f6aeb1",
+    "src/models.py": "ebdd5a240110f859aa80f93ce14ee7c16012af2a68bbb5730ca37162935b9fb9",
+    "src/common.py": "32b3c7fe07b12a182d7854e4674b925ec0751458db6549b4c8b1944d07d68b77",
+    "src/build_crops.py": "fe291d578c6f53af2fed9b90677072d0d901d9a593c9baa2f61792b201c1fa79",
+    "src/intervensi.py": "f59e38f6933490e95cfcde85ff0d4701149ff9a1b6756bead57c92b7c92e648f",
+    "src/eval_same_frame.py": "9a1e10dd4fd66d95854708cde5fc86e813e2fa4e81dd04715923235eb4c46c3a",
+    "src/eval_fixed_chick.py": "496209184b0e19e3263c4fceea77712357d1752aba9671ec3f52e8575bd24cc9",
+    "src/report_loss.py": "60b2751d78d05e64796a37bb495e7e3b0e4d0caf1d48d1b4dc0a9ddf8256c310",
+    "src/report_fixed_chick.py": "89b5a5e052c1e2ddd67f81996aca844224f2ce20f6b1e39cf065420077d36b90"
+  },
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "primary_relative_scorer": "feature512_median_loo",
+  "checkpoints": [
+    {
+      "run_id": "ce__hier_addone__s42",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\ce__hier_addone__s42\\model.pt",
+      "checkpoint_sha256": "26c28345cd5ed13fefc18cc2824a74f37497f405fd7390b43fe4f43a9ef106ef",
+      "threshold_from_validation": 0.5922015905380249,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 40,
+        "tn": 115,
+        "fp": 0,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 11,
+        "val_loss": 0.0067960392263517935
+      }
+    },
+    {
+      "run_id": "ce__hier_addone__s43",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\ce__hier_addone__s43\\model.pt",
+      "checkpoint_sha256": "13f1ed399742d97a83bc7b133540d39198351bdf4472c03205e9d9e094dc4f15",
+      "threshold_from_validation": 0.5178663730621338,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 40,
+        "tn": 115,
+        "fp": 0,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 10,
+        "val_loss": 0.0009133836369875654
+      }
+    },
+    {
+      "run_id": "ce__hier_addone__s44",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\ce__hier_addone__s44\\model.pt",
+      "checkpoint_sha256": "7ca3318709c80c7b95fce9b8b48ba575f0d7aba9b40c6d2ee795b90fd83170f2",
+      "threshold_from_validation": 0.5537058115005493,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 40,
+        "tn": 115,
+        "fp": 0,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 5,
+        "val_loss": 0.0028747827817196276
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s42",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\selfcon__simclr__s42\\model.pt",
+      "checkpoint_sha256": "90843f19589977041cce36d0f2f74010b559724192b4c7a591e59b5b824b759a",
+      "threshold_from_validation": 0.5735277533531189,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 40,
+        "tn": 115,
+        "fp": 0,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 10,
+        "val_loss": 0.061563743671994166
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s43",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\selfcon__simclr__s43\\model.pt",
+      "checkpoint_sha256": "493224594e23492236095be7e540440347afa9256ac54c4f6853dd057adb745d",
+      "threshold_from_validation": 0.5907683372497559,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 40,
+        "tn": 115,
+        "fp": 0,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 3,
+        "val_loss": 0.13091701527793198
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s44",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\selfcon__simclr__s44\\model.pt",
+      "checkpoint_sha256": "607fadc9c574834fd5865b3a917a9134aeb745706754381ccf2d92e2fa0ecfc8",
+      "threshold_from_validation": 0.7963703274726868,
+      "validation": {
+        "accuracy": 0.9871,
+        "balanced_accuracy": 0.9913,
+        "precision_dead": 0.9524,
+        "recall_dead": 1.0,
+        "recall_alive": 0.9826,
+        "f1_dead": 0.9756,
+        "tp": 40,
+        "tn": 113,
+        "fp": 2,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 36,
+        "val_loss": 0.05013364366965581
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s42",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\supcon__stacked_randaug__s42\\model.pt",
+      "checkpoint_sha256": "52077535de5ea6ce7678cab1dcb76254b2d82fe5d54fcd7a124487fd80a1141e",
+      "threshold_from_validation": 0.536157488822937,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 40,
+        "tn": 115,
+        "fp": 0,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 1,
+        "val_loss": 0.028102602977368323
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s43",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\supcon__stacked_randaug__s43\\model.pt",
+      "checkpoint_sha256": "7c6d33164079b83d16ef2be11b9152091767de67e81999d7dde41622f4ccf363",
+      "threshold_from_validation": 0.8447108268737793,
+      "validation": {
+        "accuracy": 0.9935,
+        "balanced_accuracy": 0.9957,
+        "precision_dead": 0.9756,
+        "recall_dead": 1.0,
+        "recall_alive": 0.9913,
+        "f1_dead": 0.9877,
+        "tp": 40,
+        "tn": 114,
+        "fp": 1,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 1,
+        "val_loss": 0.03156529193868639
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s44",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev\\supcon__stacked_randaug__s44\\model.pt",
+      "checkpoint_sha256": "de25e8405d75993757414b56f9d1f7b63b8af8500aa453a9c67e7250bf13bab7",
+      "threshold_from_validation": 0.9378686547279358,
+      "validation": {
+        "accuracy": 0.9935,
+        "balanced_accuracy": 0.9957,
+        "precision_dead": 0.9756,
+        "recall_dead": 1.0,
+        "recall_alive": 0.9913,
+        "f1_dead": 0.9877,
+        "tp": 40,
+        "tn": 114,
+        "fp": 1,
+        "fn": 0,
+        "n": 155,
+        "roc_auc": 1.0,
+        "epoch": 2,
+        "val_loss": 0.031891335546776894
+      }
+    }
+  ]
+}
