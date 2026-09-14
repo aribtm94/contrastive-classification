@@ -75,7 +75,27 @@ def write_report(path, data: dict, aggregates: list[dict]) -> None:
         lines += ["", "## Sensitivitas acak16", "",
                   "Acak16 versi baru deterministik, tanpa petak tetap, dan mencakup "
                   "seluruh piksel. Hasil ini hanya mengukur sensitivitas terhadap "
-                  "susunan global; ia tidak membuktikan penurunan berasal eksklusif dari pose.", ""]
+                  "susunan global; ia tidak membuktikan penurunan berasal eksklusif dari pose.", "",
+                  "Kolom delta adalah acak16 dikurangi asli. Delta mendekati nol "
+                  "berarti skor bertahan walau susunan petak dirusak, jadi model "
+                  "tidak membaca susunan global crop.", "",
+                  "| varian | metode | scorer | AP asli | AP acak16 | delta AP | "
+                  "AUC asli | AUC acak16 | delta AUC |",
+                  "|---|---|---|---:|---:|---:|---:|---:|---:|"]
+        shuffled = {(r["family"], r["method"], r["scorer"]): r
+                    for r in aggregate(data["interventions"]["acak16"])}
+        for row in aggregates:
+            other = shuffled.get((row["family"], row["method"], row["scorer"]))
+            if other is None:
+                continue
+            d_ap = other["pooled_ap"]["mean"] - row["pooled_ap"]["mean"]
+            d_auc = other["pooled_auc"]["mean"] - row["pooled_auc"]["mean"]
+            lines.append(
+                f"| {row['family']} | {row['method']} | {row['scorer']} | "
+                f"{row['pooled_ap']['mean']:.3f} | {other['pooled_ap']['mean']:.3f} | "
+                f"{d_ap:+.3f} | {row['pooled_auc']['mean']:.3f} | "
+                f"{other['pooled_auc']['mean']:.3f} | {d_auc:+.3f} |")
+        lines.append("")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines), encoding="utf-8")
 

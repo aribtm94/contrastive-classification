@@ -250,7 +250,7 @@ def main():
                     y, rel_clean, groups, numero)
                 rel_op_metric, _, _ = threshold_free(
                     y, rel_operational, groups, numero)
-                _, rel_op_rank, rel_op_norm = ranks_within_frame(
+                rel_op_rank, _, rel_op_norm = ranks_within_frame(
                     rel_operational_all, all_groups, all_numero)
                 nuisance = [nuisance_features(images[i], rows[i])
                             for i in range(len(rows))]
