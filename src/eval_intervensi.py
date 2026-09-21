@@ -108,6 +108,9 @@ def main():
                     help="folder checkpoint; default dari config")
     ap.add_argument("--crops", default=None,
                     help="folder crop; default dari config")
+    ap.add_argument("--seeds", default=None,
+                    help="daftar seed, mis. 42,43,44. Kalau kosong dipakai "
+                         "perilaku lama: satu checkpoint pertama yang ketemu")
     ap.add_argument("--json", default=None)
     a = ap.parse_args()
 
@@ -135,19 +138,18 @@ def main():
     out = {"crops": crops_dir, "runs_dir": str(cfg["output"]["runs_dir"]),
            "n_test": len(y), "results": {}}
 
-    for meth in METODE:
-        model = None
-        for s in ("__s42", "__s43", "__s44", ""):
-            try:
-                model = load_classifier(cfg, f"{meth}{s}", dev)
-                break
-            except Exception:
-                continue
-        if model is None:
-            print("{:<12}{}".format(meth.split("__")[0],
-                                    "  (checkpoint tidak ada)"))
-            continue
-        row, rec = "", {}
+    # Tanpa --seeds: perilaku lama, satu checkpoint pertama yang ketemu.
+    # Dengan --seeds: tiap seed dievaluasi sendiri lalu dirata-ratakan, supaya
+    # gerbang kausal tidak jadi klaim satu seed (aturan proyek).
+    if a.seeds:
+        akhiran = [f"__s{int(x)}" for x in a.seeds.split(",") if x.strip()]
+        out["seeds"] = akhiran
+    else:
+        akhiran = None
+
+    def ukur(model):
+        """AUC tiap perlakuan untuk satu checkpoint."""
+        rec = {}
         for nama, fn in PERLAKUAN:
             crops = [to_square(t_acak(im, i) if nama == "acak16" else fn(im),
                                size, mode) for i, im in enumerate(imgs)]
@@ -155,9 +157,47 @@ def main():
             p = np.asarray(p)
             p = p[:, 1] if p.ndim > 1 else p
             rec[nama] = float(roc_auc_score(y, p))
-            row += f"{rec[nama]:>9.3f}"
-        out["results"][meth] = rec
-        print("{:<12}".format(meth.split("__")[0]) + row)
+        return rec
+
+    for meth in METODE:
+        if akhiran is None:
+            model = None
+            for sfx in ("__s42", "__s43", "__s44", ""):
+                try:
+                    model = load_classifier(cfg, f"{meth}{sfx}", dev)
+                    break
+                except Exception:
+                    continue
+            if model is None:
+                print("{:<12}{}".format(meth.split("__")[0],
+                                        "  (checkpoint tidak ada)"))
+                continue
+            rec = ukur(model)
+            out["results"][meth] = rec
+            print("{:<12}".format(meth.split("__")[0])
+                  + "".join(f"{rec[n]:>9.3f}" for n, _ in PERLAKUAN))
+            continue
+
+        per_seed = {}
+        for sfx in akhiran:
+            try:
+                model = load_classifier(cfg, f"{meth}{sfx}", dev)
+            except Exception:
+                continue
+            per_seed[sfx] = ukur(model)
+        if not per_seed:
+            print("{:<12}{}".format(meth.split("__")[0],
+                                    "  (checkpoint tidak ada)"))
+            continue
+        rec = {n: float(np.mean([v[n] for v in per_seed.values()]))
+               for n, _ in PERLAKUAN}
+        sd = {n: float(np.std([v[n] for v in per_seed.values()]))
+              for n, _ in PERLAKUAN}
+        out["results"][meth] = {"rata": rec, "simpangan": sd,
+                                "per_seed": per_seed}
+        print("{:<12}".format(meth.split("__")[0])
+              + "".join(f"{rec[n]:>9.3f}" for n, _ in PERLAKUAN)
+              + f"   (n_seed={len(per_seed)})")
 
     print("\n  Angka = test AUC. 0.5 = sudah tidak bisa memisahkan.")
     print("  'acak16' bentuk ayam sudah hancur: kalau AUC-nya tetap tinggi,")

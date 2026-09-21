@@ -22,6 +22,7 @@ import hashlib
 import json
 import random
 import zlib
+from collections import Counter
 
 import cv2
 import numpy as np
@@ -476,7 +477,24 @@ def validate_development_manifest(cfg: dict) -> dict:
     splits = {r["split"] for r in rows}
     if splits != allowed_splits:
         raise ValueError(f"development hanya boleh train+val, ditemukan {splits}")
+    # Pasangan (origin, domain) yang boleh muncul, PER LABEL.
+    # Bawaannya pasangan lama yang dipaku sejak protokol pertama, sehingga
+    # config_pio_dev.yaml dan config_pio_eq_dev.yaml tidak berubah satu baris
+    # pun. Susunan yang menambah sumber baru - misalnya domain ayam mati
+    # kedua dari archive_4 - wajib mendaftarkannya lewat
+    # protocol.allowed_provenance; sumber yang tidak terdaftar tetap ditolak.
+    izin_cfg = protocol.get("allowed_provenance")
+    if izin_cfg:
+        izin = {}
+        for label_key, pasangan in izin_cfg.items():
+            lab = 0 if str(label_key) in ("0", "alive", "hidup") else 1
+            izin.setdefault(lab, set()).update(
+                (str(o), str(d)) for o, d in pasangan)
+    else:
+        izin = {0: {("pio_gt", "cctv")}, 1: {("coco_gt", "closeup")}}
+
     seen = {}
+    provenance_terpakai = Counter()
     for r in rows:
         # Jangan periksa `abspath`: nama root repo sendiri memuat kata
         # "chicken". Yang dilarang adalah provenance baris dari benchmark.
@@ -484,11 +502,10 @@ def validate_development_manifest(cfg: dict) -> dict:
                               for k in ("path", "src_file", "base_image"))
         if "chick (" in provenance or "ayam (" in provenance:
             raise ValueError("dataset chick ditemukan di manifest development")
-        expected = (("pio_gt", "cctv") if r["label"] == 0
-                    else ("coco_gt", "closeup"))
         actual = (r.get("origin"), r.get("domain"))
-        if actual != expected:
+        if actual not in izin.get(r["label"], set()):
             raise ValueError(f"provenance tidak cocok: {r['path']} {actual}")
+        provenance_terpakai[actual] += 1
         old = seen.setdefault(r["base_image"], r["split"])
         if old != r["split"]:
             raise ValueError(f"base_image bocor antar split: {r['base_image']}")
@@ -506,7 +523,9 @@ def validate_development_manifest(cfg: dict) -> dict:
     if lock.get("base_image_to_split") != dict(sorted(seen.items())):
         raise ValueError("mapping base_image tidak cocok dengan split lock")
     return {"counts": counts, "n_base_images": len(seen),
-            "manifest_sha256": lock["manifest_sha256"]}
+            "manifest_sha256": lock["manifest_sha256"],
+            "provenance": {f"{o}/{d}": n
+                           for (o, d), n in sorted(provenance_terpakai.items())}}
 
 
 class _Base(Dataset):

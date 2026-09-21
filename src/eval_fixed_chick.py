@@ -264,7 +264,11 @@ def main():
                     **{f"bukan_in_top_{k}": int((rel_op_rank[bukan_idx] <= k).sum())
                        for k in (1, 3, 5)},
                 }
+                # Varian crop (asli / eq48) dibaca hilir dari sini, bukan
+                # ditebak dari nama berkas registry. Hanya blok crops yang
+                # ikut supaya JSON tidak membengkak oleh config penuh.
                 records.append({"registry": str(registry_path), **item,
+                                "config_snapshot": {"crops": cfg["crops"]},
                                 "intervention": intervention,
                                 "absolute": abs_metric,
                                 "relative_clean": rel_clean_metric,

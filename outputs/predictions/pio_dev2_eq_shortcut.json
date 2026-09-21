@@ -1,0 +1,68 @@
+{
+  "crops": "data/crops_pio_dev2_eq",
+  "features": {
+    "ketajaman": {
+      "threshold": 30.2438815048167,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.837409420289855,
+      "val_bacc": 0.7521929824561404,
+      "val_auc_raw": 0.20849577647823261,
+      "val_auc": 0.7915042235217674
+    },
+    "rasio_bbox": {
+      "threshold": 1.3134715025906736,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.6897644927536233,
+      "val_bacc": 0.713206627680312,
+      "val_auc_raw": 0.586825860948668,
+      "val_auc": 0.586825860948668
+    },
+    "saturasi": {
+      "threshold": 10.13428730867347,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.78125,
+      "val_bacc": 0.7814327485380117,
+      "val_auc_raw": 0.2820012995451592,
+      "val_auc": 0.7179987004548408
+    },
+    "terang": {
+      "threshold": 128.29797114158163,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.6396059782608696,
+      "val_bacc": 0.6888401559454191,
+      "val_auc_raw": 0.3685834957764782,
+      "val_auc": 0.6314165042235218
+    },
+    "hue": {
+      "threshold": 28.530552455357142,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.5619338768115942,
+      "val_bacc": 0.5038986354775828,
+      "val_auc_raw": 0.47530864197530864,
+      "val_auc": 0.5246913580246914
+    },
+    "std_terang": {
+      "threshold": 36.209558576758006,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.8189538043478262,
+      "val_bacc": 0.7105263157894737,
+      "val_auc_raw": 0.19655620532813514,
+      "val_auc": 0.8034437946718649
+    },
+    "ukuran_bbox": {
+      "threshold": 174.5,
+      "sign": 1,
+      "from_pixels": false,
+      "train_bacc": 0.9483695652173914,
+      "val_bacc": 0.9517543859649122,
+      "val_auc_raw": 0.9976445743989603,
+      "val_auc": 0.9976445743989603
+    }
+  }
+}

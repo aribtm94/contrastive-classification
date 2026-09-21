@@ -43,6 +43,7 @@ import hashlib
 import json
 import random
 import re
+import zipfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -284,6 +285,82 @@ def collect_pio_alive(cfg: dict) -> tuple:
     return rows, skipped
 
 
+def collect_archive4_dead(cfg: dict) -> tuple:
+    """
+    Ambil ayam MATI dari archive_4 (Kaggle "Multimodal Chicken Datasets")
+    sebagai DOMAIN KEDUA untuk kelas mati.
+
+    Kenapa perlu. Susunan lama: hidup = PIO (CCTV), mati = Roboflow
+    (close-up). Satu domain per label, jadi "crop ini dari dataset mana"
+    sudah cukup untuk menebak labelnya dengan benar - `label = domain`.
+    Menambah sumber mati kedua membuat pemetaan itu tidak lagi satu-satu.
+
+    BATASAN YANG HARUS IKUT DILAPORKAN. archive_4 punya jalan pintasnya
+    sendiri, terukur pada 200 RGB mati vs 200 RGB sehat: terang AUC 0.835,
+    saturasi 0.874 (arah terbalik), ukuran berkas 0.703. Jadi angka yang naik
+    setelah penambahan ini TIDAK boleh langsung dikreditkan ke "model jadi
+    mengenali ayam mati" - bisa saja jalan pintas lama ditukar dengan yang
+    baru. Gerbang eval_shortcut_baseline wajib dibaca lebih dulu.
+
+    Gambarnya frame utuh 640x480 berisi satu ayam, BUKAN hasil deteksi.
+    Karena itu bbox dicatat [0,0,W,H] dan conf 1.0 - apa adanya, supaya
+    tidak ada yang mengira ini keluaran detektor. Hanya `mati_rgb_*.jpg`
+    yang dipakai; `mati_inframerah_*` dilewati (keputusan user: RGB saja).
+    """
+    ccfg = cfg["crops"]
+    zip_path = resolve(ccfg["archive4_zip"])
+    folder = str(ccfg.get("archive4_dead_dir", "Multimodal Chicken Datasets/dead"))
+    pola = str(ccfg.get("archive4_pattern", "mati_rgb_"))
+    out_dir = resolve(ccfg["out_dir"])
+    size = int(cfg["classifier"]["image_size"])
+    mode = cfg["classifier"]["resize_mode"]
+
+    if not zip_path.exists():
+        print(f"[crops] archive_4 tidak ditemukan: {zip_path}")
+        return [], Counter()
+
+    rows, skipped = [], Counter()
+    seen_hash = {}
+    with zipfile.ZipFile(zip_path) as z:
+        names = sorted(n for n in z.namelist()
+                       if n.startswith(folder + "/")
+                       and Path(n).name.startswith(pola)
+                       and not n.endswith("/"))
+        print(f"[crops] archive_4 -> {len(names)} berkas cocok '{pola}*'")
+        for nama in names:
+            blob = z.read(nama)
+            # Buang duplikat byte-identik kalau ada. Pada rilis yang diukur
+            # (21 Sep 2026) tidak ada satu pun di antara 200 mati_rgb -
+            # penjaga ini tetap dipasang supaya rilis lain tidak lolos diam.
+            h = hashlib.sha256(blob).hexdigest()
+            kembar = seen_hash.get(h)
+            if kembar is not None:
+                skipped["archive4_duplikat"] += 1
+                print(f"        duplikat dilewati: {Path(nama).name} "
+                      f"= {kembar}")
+                continue
+            seen_hash[h] = Path(nama).name
+
+            img = cv2.imdecode(np.frombuffer(blob, np.uint8), cv2.IMREAD_COLOR)
+            if img is None:
+                skipped["archive4_gagal_baca"] += 1
+                continue
+            H, W = img.shape[:2]
+            stem = Path(nama).stem
+            berkas = f"dead_archive4_{stem}.jpg"
+            imwrite(out_dir / "dead" / berkas,
+                    to_square(equalize(img, ccfg), size, mode))
+            rows.append({"path": f"dead/{berkas}", "label": 1,
+                         "label_name": "dead", "source_split": "archive4",
+                         "base_image": f"archive4_{stem}",
+                         "src_file": Path(nama).name,
+                         "bbox": [0, 0, W, H], "conf": 1.0,
+                         "origin": "archive4_rgb", "domain": "closeup_kaggle"})
+
+    print(f"[crops] archive_4 -> {len(rows)} crop ayam mati "
+          f"(domain closeup_kaggle)")
+    return rows, skipped
+
 def build(cfg: dict) -> dict:
     ccfg = cfg["crops"]
     src = str(ccfg.get("alive_source", "same_image")).lower()
@@ -299,6 +376,13 @@ def build(cfg: dict) -> dict:
         pio_rows, pio_skip = collect_pio_alive(cfg)
         rows += pio_rows
         skipped.update(pio_skip)
+
+    # Sumber ayam MATI kedua. Mati secara bawaan: config lama tidak punya
+    # kunci ini, jadi seluruh susunan yang sudah beku terbit sama persis.
+    if ccfg.get("archive4_zip"):
+        a4_rows, a4_skip = collect_archive4_dead(cfg)
+        rows += a4_rows
+        skipped.update(a4_skip)
 
     if not rows:
         raise RuntimeError("Tidak ada crop yang terbentuk.")

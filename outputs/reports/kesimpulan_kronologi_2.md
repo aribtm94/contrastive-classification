@@ -364,12 +364,36 @@ benar**, sementara nilai yang lebih tinggi didapat **karena alasan yang salah**.
    Perbandingan dalam satu frame mematahkannya **secara konstruksi**.
 2. **Kejar AUC 0.883 sebagai syarat lulus.** Model apa pun yang tidak
    melewatinya belum boleh disebut lebih baik daripada tidak punya model.
-3. **Periksa kurva SupCon yang datar** - 4.09 ke 3.54 dalam 60 epoch penuh.
-   Kalau tahap contrastive-nya praktis tidak belajar, keunggulan SupCon di test
-   sebenarnya milik probe liniernya, dan itu mengubah kesimpulan soal metode.
-4. **Cari sumber ayam mati kedua** dengan domain berbeda. Ini satu-satunya cara
-   memutus `label = domain` dari sisi data, dan butuh anotasi baru - bukan
-   arsitektur baru.
+3. ~~**Periksa kurva SupCon yang datar**~~ - **dicoret, sudah dijawab.** Di
+   SDNET2018 kurva SupCon bergerak lebih sedikit lagi (turun 4.3-4.9% vs 13%
+   pada ayam) namun justru menghasilkan representasi **terbaik** (AUC 0.8573).
+   Besarnya penurunan loss SupCon bukan alat ukur yang sah - loss itu
+   dinormalisasi atas banyak positif sehingga lantainya jauh di atas nol.
+   Lihat [`uji_kewarasan_sdnet.md`](uji_kewarasan_sdnet.md) bagian 5. Untuk
+   benar-benar menguji sumbangan tahap contrastive, bandingkan probe di atas
+   encoder terlatih vs encoder acak/beku - bukan besarnya loss.
+4. ~~**Cari sumber ayam mati kedua**~~ - **selesai dikerjakan, dan hasilnya
+   negatif.** archive_4 Kaggle ditambahkan sebagai domain mati kedua (susunan
+   `pio_dev2` dan `pio_dev2_eq`, 200 crop, 18 run penuh). Tiga temuan, dan
+   ketiganya melawan harapan:
+
+   - **Jalan pintas ditukar, bukan dihapus.** Hue runtuh 0.9135 -> 0.5093,
+     tapi `ukuran_bbox` naik ke **0.9976** - archive_4 adalah frame utuh sisi
+     pendek 480 px sementara crop PIO 71 px.
+   - **`label = domain` tetap 100%.** Menebak label dari domain masih benar
+     598/598. Yang patah cuma arah sebaliknya (satu label tidak lagi berarti
+     satu domain).
+   - **Benchmark test chick justru TURUN.** Rata-rata-3-seed terbaik
+     0.7917 -> **0.7287**; checkpoint tunggal terbaik 0.8753 -> **0.7783**.
+     **0 dari 6** konfigurasi melewati lantai 0.8831, pada ketiga scorer, dan
+     `acak16` menaikkan skor pada **12 dari 18** checkpoint - lebih parah
+     daripada babak 14.
+
+   Lihat [`domain_mati_kedua.md`](domain_mati_kedua.md) bagian 5. Kesimpulannya
+   menguatkan butir 1, bukan melemahkannya: menambah **sumber** ayam mati tidak
+   cukup, karena tiap sumber baru membawa domainnya sendiri. Memutus
+   `label = domain` butuh ayam mati dan hidup **dari frame yang sama**, dan
+   mencari sumber ketiga hanya akan mengulang hasil ini.
 
 > **Perumpamaan penutup.** Sebelas babak pertama adalah belajar membaca
 > timbangan. Babak 12-13 adalah menyegel timbangannya supaya tidak bisa
@@ -393,6 +417,8 @@ benar**, sementara nilai yang lebih tinggi didapat **karena alasan yang salah**.
 | [`same_frame_stage1.md`](same_frame_stage1.md) | Tahap 1 skor relatif satu-frame |
 | [`same_frame_stage1_causal.md`](same_frame_stage1_causal.md) | gerbang kausal skor relatif |
 | [`../../tujuan.md`](../../tujuan.md) | rencana Tahap 2 dan Tahap 3 |
+| [`uji_kewarasan_sdnet.md`](uji_kewarasan_sdnet.md) | Bagian A - pipeline diuji di SDNET2018, membantah butir 3 |
+| [`domain_mati_kedua.md`](domain_mati_kedua.md) | Bagian B - archive_4 sebagai domain mati kedua; butir 4 selesai dengan hasil negatif |
 
 Reproduksi figur dokumen ini:
 

@@ -1,0 +1,206 @@
+device: cuda
+grid: diagonal | metode ['selfcon', 'supcon', 'ce'] | aug [None] | seed [42, 43, 44]
+
+==============================================================
+METODE: selfcon  |  aug: simclr  |  seed: 42
+  Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [selfcon] tahap 1/2 - contrastive, 60 epoch, 376 train / 222 val
+    epoch   1/60  train_loss 3.4467  val_loss 3.4146
+    epoch  11/60  train_loss 1.4013  val_loss 2.0718
+    epoch  21/60  train_loss 0.8207  val_loss 1.5082
+    epoch  31/60  train_loss 0.5389  val_loss 1.3212
+    epoch  41/60  train_loss 0.4294  val_loss 1.0598
+    epoch  51/60  train_loss 0.2975  val_loss 0.9480
+    epoch  60/60  train_loss 0.2438  val_loss 0.9295
+  [selfcon] tahap 2/2 - linear probe
+  [selfcon_probe] 40 epoch, encoder BEKU (linear probe)
+    epoch   1/40  train_loss 0.5187  val_loss 0.3651  val_bacc 0.8947
+    epoch  11/40  train_loss 0.0397  val_loss 0.0903  val_bacc 0.9686
+    epoch  21/40  train_loss 0.0242  val_loss 0.0751  val_bacc 0.9686
+    epoch  31/40  train_loss 0.0191  val_loss 0.0713  val_bacc 0.9686
+    epoch  40/40  train_loss 0.0205  val_loss 0.0708  val_bacc 0.9686
+
+  VAL  bacc 0.9686   ambang terpilih 0.7983
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 436.4 detik
+
+==============================================================
+METODE: selfcon  |  aug: simclr  |  seed: 43
+  Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [selfcon] tahap 1/2 - contrastive, 60 epoch, 376 train / 222 val
+    epoch   1/60  train_loss 3.3802  val_loss 4.1112
+    epoch  11/60  train_loss 1.3746  val_loss 2.1257
+    epoch  21/60  train_loss 0.7181  val_loss 1.6530
+    epoch  31/60  train_loss 0.4727  val_loss 1.3293
+    epoch  41/60  train_loss 0.3769  val_loss 1.0714
+    epoch  51/60  train_loss 0.2988  val_loss 0.9365
+    epoch  60/60  train_loss 0.2818  val_loss 0.8935
+  [selfcon] tahap 2/2 - linear probe
+  [selfcon_probe] 40 epoch, encoder BEKU (linear probe)
+    epoch   1/40  train_loss 0.4956  val_loss 0.3270  val_bacc 0.8804
+    epoch  11/40  train_loss 0.0419  val_loss 0.1149  val_bacc 0.9542
+    epoch  21/40  train_loss 0.0247  val_loss 0.1087  val_bacc 0.9542
+    epoch  31/40  train_loss 0.0202  val_loss 0.1005  val_bacc 0.9542
+    epoch  40/40  train_loss 0.0184  val_loss 0.1014  val_bacc 0.9542
+
+  VAL  bacc 0.9542   ambang terpilih 0.8075
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 435.5 detik
+
+==============================================================
+METODE: selfcon  |  aug: simclr  |  seed: 44
+  Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [selfcon] tahap 1/2 - contrastive, 60 epoch, 376 train / 222 val
+    epoch   1/60  train_loss 3.3246  val_loss 3.5134
+    epoch  11/60  train_loss 1.1659  val_loss 1.8532
+    epoch  21/60  train_loss 0.8179  val_loss 1.5151
+    epoch  31/60  train_loss 0.5469  val_loss 1.4621
+    epoch  41/60  train_loss 0.3041  val_loss 1.0806
+    epoch  51/60  train_loss 0.2539  val_loss 0.9645
+    epoch  60/60  train_loss 0.2094  val_loss 0.9403
+  [selfcon] tahap 2/2 - linear probe
+  [selfcon_probe] 40 epoch, encoder BEKU (linear probe)
+    epoch   1/40  train_loss 0.5377  val_loss 0.3607  val_bacc 0.8572
+    epoch  11/40  train_loss 0.0513  val_loss 0.1001  val_bacc 0.9547
+    epoch  21/40  train_loss 0.0298  val_loss 0.0849  val_bacc 0.9596
+    epoch  31/40  train_loss 0.0252  val_loss 0.0827  val_bacc 0.9596
+    early stop di epoch 38 (tidak membaik 15 epoch)
+
+  VAL  bacc 0.9639   ambang terpilih 0.7079
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 431.0 detik
+
+==============================================================
+METODE: supcon  |  aug: stacked_randaug  |  seed: 42
+  Supervised Contrastive - label hidup & mati digabung dalam loss
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [supcon] tahap 1/2 - contrastive, 60 epoch, 376 train / 222 val
+    epoch   1/60  train_loss 4.0362  val_loss 3.8146
+    epoch  11/60  train_loss 3.5757  val_loss 3.6131
+    epoch  21/60  train_loss 3.5296  val_loss 3.6463
+    epoch  31/60  train_loss 3.4801  val_loss 3.5056
+    epoch  41/60  train_loss 3.4453  val_loss 3.4913
+    epoch  51/60  train_loss 3.4475  val_loss 3.5014
+    epoch  60/60  train_loss 3.4425  val_loss 3.5030
+  [supcon] tahap 2/2 - linear probe
+  [supcon_probe] 40 epoch, encoder BEKU (linear probe)
+    epoch   1/40  train_loss 0.1500  val_loss 0.0333  val_bacc 0.9954
+    epoch  11/40  train_loss 0.0009  val_loss 0.0188  val_bacc 0.9954
+    early stop di epoch 16 (tidak membaik 15 epoch)
+
+  VAL  bacc 0.9954   ambang terpilih 0.8042
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 463.7 detik
+
+==============================================================
+METODE: supcon  |  aug: stacked_randaug  |  seed: 43
+  Supervised Contrastive - label hidup & mati digabung dalam loss
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [supcon] tahap 1/2 - contrastive, 60 epoch, 376 train / 222 val
+    epoch   1/60  train_loss 4.0954  val_loss 3.7382
+    epoch  11/60  train_loss 3.4856  val_loss 3.7377
+    epoch  21/60  train_loss 3.4842  val_loss 3.5795
+    epoch  31/60  train_loss 3.4691  val_loss 3.5716
+    epoch  41/60  train_loss 3.4421  val_loss 3.5106
+    epoch  51/60  train_loss 3.4464  val_loss 3.4933
+    epoch  60/60  train_loss 3.4430  val_loss 3.4956
+  [supcon] tahap 2/2 - linear probe
+  [supcon_probe] 40 epoch, encoder BEKU (linear probe)
+    epoch   1/40  train_loss 0.1612  val_loss 0.0231  val_bacc 0.9954
+    epoch  11/40  train_loss 0.0006  val_loss 0.0093  val_bacc 0.9954
+    early stop di epoch 16 (tidak membaik 15 epoch)
+
+  VAL  bacc 0.9954   ambang terpilih 0.7854
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 466.7 detik
+
+==============================================================
+METODE: supcon  |  aug: stacked_randaug  |  seed: 44
+  Supervised Contrastive - label hidup & mati digabung dalam loss
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [supcon] tahap 1/2 - contrastive, 60 epoch, 376 train / 222 val
+    epoch   1/60  train_loss 4.0119  val_loss 3.8426
+    epoch  11/60  train_loss 3.5495  val_loss 3.6342
+    epoch  21/60  train_loss 3.5002  val_loss 3.6592
+    epoch  31/60  train_loss 3.4799  val_loss 3.5473
+    epoch  41/60  train_loss 3.4536  val_loss 3.5132
+    epoch  51/60  train_loss 3.4458  val_loss 3.5177
+    epoch  60/60  train_loss 3.4365  val_loss 3.5133
+  [supcon] tahap 2/2 - linear probe
+  [supcon_probe] 40 epoch, encoder BEKU (linear probe)
+    epoch   1/40  train_loss 0.1287  val_loss 0.0281  val_bacc 1.0000
+    epoch  11/40  train_loss 0.0008  val_loss 0.0066  val_bacc 1.0000
+    early stop di epoch 16 (tidak membaik 15 epoch)
+
+  VAL  bacc 1.0000   ambang terpilih 0.6203
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 465.5 detik
+
+==============================================================
+METODE: ce  |  aug: hier_addone  |  seed: 42
+  Klasifikasi biasa (Cross-Entropy) - baseline
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [ce] 60 epoch, encoder ikut dilatih
+    epoch   1/60  train_loss 0.3783  val_loss 0.1144  val_bacc 0.9734
+    epoch  11/60  train_loss 0.0918  val_loss 0.0271  val_bacc 0.9861
+    early stop di epoch 20 (tidak membaik 15 epoch)
+
+  VAL  bacc 1.0000   ambang terpilih 0.6013
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 59.6 detik
+
+==============================================================
+METODE: ce  |  aug: hier_addone  |  seed: 43
+  Klasifikasi biasa (Cross-Entropy) - baseline
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [ce] 60 epoch, encoder ikut dilatih
+    epoch   1/60  train_loss 0.3866  val_loss 0.1684  val_bacc 0.9557
+    epoch  11/60  train_loss 0.0741  val_loss 0.0135  val_bacc 0.9912
+    epoch  21/60  train_loss 0.0506  val_loss 0.0146  val_bacc 1.0000
+    early stop di epoch 29 (tidak membaik 15 epoch)
+
+  VAL  bacc 1.0000   ambang terpilih 0.7072
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 86.5 detik
+
+==============================================================
+METODE: ce  |  aug: hier_addone  |  seed: 44
+  Klasifikasi biasa (Cross-Entropy) - baseline
+==============================================================
+  data: train 376, val 222 (development; chick tidak dibaca)
+  [ce] 60 epoch, encoder ikut dilatih
+    epoch   1/60  train_loss 0.4046  val_loss 0.1854  val_bacc 0.9386
+    epoch  11/60  train_loss 0.0845  val_loss 0.0170  val_bacc 0.9954
+    epoch  21/60  train_loss 0.0405  val_loss 0.0534  val_bacc 0.9781
+    early stop di epoch 23 (tidak membaik 15 epoch)
+
+  VAL  bacc 1.0000   ambang terpilih 0.3966
+  TEST tidak dibaca; benchmark ayam dijalankan terpisah.
+  waktu 68.4 detik
+[development] history : C:\Arib\MASSA AYAM\chicken detection + constrative classification\outputs\reports\pio_dev2_eq_history.csv
+[development] registry: C:\Arib\MASSA AYAM\chicken detection + constrative classification\outputs\predictions\pio_dev2_eq_registry.json
+
+==============================================================
+RINGKASAN VALIDATION (bukan hasil test)
+==============================================================
+metode   aug               seed     bacc      AUC    tau_val
+ce       hier_addone         42   1.0000   1.0000     0.6013
+ce       hier_addone         43   1.0000   1.0000     0.7072
+ce       hier_addone         44   1.0000   1.0000     0.3966
+selfcon  simclr              42   0.9686   0.9977     0.7983
+selfcon  simclr              43   0.9542   0.9961     0.8075
+selfcon  simclr              44   0.9639   0.9966     0.7079
+supcon   stacked_randaug     42   0.9954   1.0000     0.8042
+supcon   stacked_randaug     43   0.9954   1.0000     0.7854
+supcon   stacked_randaug     44   1.0000   1.0000     0.6203

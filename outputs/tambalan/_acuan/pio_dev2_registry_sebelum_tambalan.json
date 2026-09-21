@@ -1,0 +1,600 @@
+{
+  "schema_version": 1,
+  "experiment": "pio_roboflow_development",
+  "test_policy": "fixed_retrospective_chick_test_only",
+  "data_contract": {
+    "alive": "PIO/pio_gt/cctv",
+    "dead": "Roboflow/coco_gt/closeup",
+    "train_validation_only": true,
+    "label_equals_domain_limitation": true,
+    "test_root": "C:/Arib/CCTV/patnet-pure/dataset/chick",
+    "test_counts": {
+      "total": 1215,
+      "dead": 22,
+      "alive": 921,
+      "bukan": 272,
+      "frames": 18
+    }
+  },
+  "config": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\configs\\config_pio_dev2.yaml",
+  "config_sha256": "91effa4eb74ce505294c7fcadc7bfcff513688b8da4db724b1e2f0b44a7641ea",
+  "config_snapshot": {
+    "seed": 42,
+    "device": "auto",
+    "protocol": {
+      "development_only": true,
+      "expected_counts": {
+        "train": {
+          "alive": 192,
+          "dead": 184,
+          "total": 376
+        },
+        "val": {
+          "alive": 108,
+          "dead": 114,
+          "total": 222
+        }
+      },
+      "split_lock": "data/crops_pio_dev2/dev_split_lock.json",
+      "history_csv": "outputs/reports/pio_dev2_history.csv",
+      "registry": "outputs/predictions/pio_dev2_registry.json",
+      "shortcut_json": "outputs/predictions/pio_dev2_shortcut.json",
+      "validation_seed_offset": 900001,
+      "allowed_provenance": {
+        "alive": [
+          [
+            "pio_gt",
+            "cctv"
+          ]
+        ],
+        "dead": [
+          [
+            "coco_gt",
+            "closeup"
+          ],
+          [
+            "archive4_rgb",
+            "closeup_kaggle"
+          ]
+        ]
+      }
+    },
+    "detection": {
+      "weights": "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/runs_compare/cmp_yolov8m/weights/best.pt",
+      "imgsz": 640,
+      "conf": 0.25,
+      "iou": 0.7,
+      "max_det": 300,
+      "test_images": null
+    },
+    "crops": {
+      "dead_root": "C:/Arib/MASSA AYAM/Pretrained method vs trained objek/repro/data/dead-chikens",
+      "splits": [
+        "train",
+        "valid",
+        "test"
+      ],
+      "out_dir": "data/crops_pio_dev2",
+      "manifest": "data/crops_pio_dev2/manifest.csv",
+      "archive4_zip": "data/ayam mati no paper/archive_4.zip",
+      "archive4_dead_dir": "Multimodal Chicken Datasets/dead",
+      "archive4_pattern": "mati_rgb_",
+      "alive_source": "pio",
+      "alive_detector": "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/yolov8m.pt",
+      "alive_detector_class": 14,
+      "alive_detector_imgsz": 640,
+      "alive_min_conf": 0.25,
+      "alive_min_box": 48,
+      "alive_max_iou_with_dead": 0.01,
+      "pio_images": "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/_pio_yolo/images/train",
+      "pio_labels": "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/train model/_pio_yolo/labels/train",
+      "pio_max_crops": 300,
+      "pio_max_per_image": 12,
+      "equalize_resolution": {
+        "enabled": false,
+        "target_short_side": 96
+      },
+      "bbox_padding": 0.1,
+      "min_box_size": 16,
+      "max_alive_per_dead": 3.0,
+      "split_by_base_image": true,
+      "split_names": [
+        "train",
+        "val"
+      ],
+      "split_ratio": [
+        0.6,
+        0.4
+      ],
+      "save_review_grid": false
+    },
+    "classifier": {
+      "image_size": 224,
+      "resize_mode": "letterbox",
+      "backbone": "resnet18",
+      "pretrained": true,
+      "feature_dim": 512,
+      "proj_dim": 128,
+      "proj_hidden": 512,
+      "batch_size": 32,
+      "num_workers": 0,
+      "temperature": 0.07,
+      "epochs_contrastive": 60,
+      "lr_contrastive": 0.0005,
+      "epochs_probe": 40,
+      "lr_probe": 0.001,
+      "epochs_ce": 60,
+      "lr_ce": 0.0001,
+      "weight_decay": 0.0001,
+      "class_weighting": true,
+      "supcon_ce_weight": 0.0,
+      "early_stop_patience": 15
+    },
+    "augmentation": {
+      "by_method": {
+        "selfcon": {
+          "contrastive": "simclr",
+          "head": "minimal"
+        },
+        "supcon": {
+          "contrastive": "stacked_randaug",
+          "head": "minimal"
+        },
+        "ce": {
+          "contrastive": null,
+          "head": "hier_addone"
+        }
+      },
+      "lock_probe_policy": true,
+      "preview_views": 6,
+      "preview_samples": 4,
+      "policies": {
+        "none": {
+          "ops": []
+        },
+        "minimal": {
+          "ops": [
+            {
+              "op": "hflip",
+              "p": 0.5
+            }
+          ]
+        },
+        "legacy": {
+          "ops": [
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "rrc_iso",
+              "p": 0.7,
+              "scale": [
+                0.7,
+                1.0
+              ]
+            },
+            {
+              "op": "bright_contrast",
+              "p": 0.8,
+              "alpha": [
+                0.7,
+                1.3
+              ],
+              "beta": [
+                -30,
+                30
+              ]
+            },
+            {
+              "op": "hsv",
+              "p": 0.5,
+              "sat": [
+                0.6,
+                1.4
+              ],
+              "hue": [
+                -8,
+                8
+              ]
+            },
+            {
+              "op": "gray",
+              "p": 0.2
+            },
+            {
+              "op": "blur",
+              "p": 0.3,
+              "kernel": [
+                3,
+                5
+              ]
+            }
+          ]
+        },
+        "simclr": {
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ]
+            },
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "color_jitter",
+              "p": 0.8,
+              "strength": 1.0
+            },
+            {
+              "op": "gray",
+              "p": 0.2
+            },
+            {
+              "op": "blur",
+              "p": 0.5,
+              "kernel_frac": 0.1,
+              "sigma": [
+                0.1,
+                2.0
+              ]
+            }
+          ]
+        },
+        "stacked_randaug": {
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ]
+            },
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "randaug",
+              "p": 1.0,
+              "n": 2,
+              "magnitude": 9,
+              "stacked": true
+            }
+          ]
+        },
+        "hier_addone": {
+          "level_sampling": true,
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ],
+              "level": 0
+            },
+            {
+              "op": "color_jitter",
+              "p": 0.8,
+              "strength": 1.0,
+              "level": 1
+            },
+            {
+              "op": "gray",
+              "p": 0.2,
+              "level": 2
+            },
+            {
+              "op": "blur",
+              "p": 0.5,
+              "kernel_frac": 0.1,
+              "sigma": [
+                0.1,
+                2.0
+              ],
+              "level": 3
+            },
+            {
+              "op": "hflip",
+              "p": 0.5,
+              "level": 4
+            }
+          ]
+        }
+      }
+    },
+    "output": {
+      "runs_dir": "outputs/runs_pio_dev2",
+      "reports_dir": "outputs/reports",
+      "predictions_dir": "outputs/predictions"
+    },
+    "methods": {
+      "selfcon": "Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe",
+      "supcon": "Supervised Contrastive - label hidup & mati digabung dalam loss",
+      "ce": "Klasifikasi biasa (Cross-Entropy) - baseline"
+    }
+  },
+  "manifest": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\data\\crops_pio_dev2\\manifest.csv",
+  "manifest_sha256": "c1df24cb74c144f42923a12212632d78abadd191cbfca247bb4608f9215b755b",
+  "split_lock": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\data\\crops_pio_dev2\\dev_split_lock.json",
+  "split_lock_sha256": "9a87d0b2c5b6711d37fc8f54c9f1df741352f19ddaee32488818ed13e03e5f87",
+  "shortcut_baseline": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\predictions\\pio_dev2_shortcut.json",
+  "shortcut_baseline_sha256": "b08941d221e5f1d5276fcdac5ada2f314ea652c65fcb11ff8c88deeb2071ceda",
+  "runtime": {
+    "python": "3.10.6",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "torch": "2.6.0+cu124",
+    "torchvision": "0.21.0+cu124",
+    "cuda_runtime": "12.4",
+    "cudnn": 90100,
+    "device": "cuda",
+    "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "git_commit": "213dfe42bd7ee3f26e83877b8f3803479956cf1e",
+    "git_dirty": true
+  },
+  "source_sha256": {
+    "src/train.py": "3d32495e73b870b74df24f4a071095c7c669ddaefb337f8ccd90ebce00843af7",
+    "src/dataset.py": "27ad439f711129a49dab66c342d7bd2f29a7a3a91cc1522b122fa9d9a969f9c8",
+    "src/models.py": "ebdd5a240110f859aa80f93ce14ee7c16012af2a68bbb5730ca37162935b9fb9",
+    "src/common.py": "32b3c7fe07b12a182d7854e4674b925ec0751458db6549b4c8b1944d07d68b77",
+    "src/build_crops.py": "7f8f8504ba97bc6a33407a6b6180f0b11774b465a85964024cb4c8e443969543",
+    "src/intervensi.py": "f59e38f6933490e95cfcde85ff0d4701149ff9a1b6756bead57c92b7c92e648f",
+    "src/eval_same_frame.py": "9a1e10dd4fd66d95854708cde5fc86e813e2fa4e81dd04715923235eb4c46c3a",
+    "src/eval_fixed_chick.py": "7bc68cc46849c4a18f22c2151d3d7a6716dba50c2fdc9921a63907ead848fa5a",
+    "src/report_loss.py": "60b2751d78d05e64796a37bb495e7e3b0e4d0caf1d48d1b4dc0a9ddf8256c310",
+    "src/report_fixed_chick.py": "1afbbfbf4fb85317c8492fd513285043a2dcbd81ec5ec93813759014bfe5c684"
+  },
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "primary_relative_scorer": "feature512_median_loo",
+  "checkpoints": [
+    {
+      "run_id": "ce__hier_addone__s42",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\ce__hier_addone__s42\\model.pt",
+      "checkpoint_sha256": "0e600547d1064c59bf5b332a55c4bdd929b554b017e7bfc98ec46046d421cc2c",
+      "threshold_from_validation": 0.5803812742233276,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 114,
+        "tn": 108,
+        "fp": 0,
+        "fn": 0,
+        "n": 222,
+        "roc_auc": 1.0,
+        "epoch": 1,
+        "val_loss": 0.01482488881694068
+      }
+    },
+    {
+      "run_id": "ce__hier_addone__s43",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\ce__hier_addone__s43\\model.pt",
+      "checkpoint_sha256": "e188662ec7b40f364297379a5637299c4d64870cbae6f26ea07ae73a98ae5913",
+      "threshold_from_validation": 0.4864034652709961,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 114,
+        "tn": 108,
+        "fp": 0,
+        "fn": 0,
+        "n": 222,
+        "roc_auc": 1.0,
+        "epoch": 2,
+        "val_loss": 0.0016364862631856056
+      }
+    },
+    {
+      "run_id": "ce__hier_addone__s44",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\ce__hier_addone__s44\\model.pt",
+      "checkpoint_sha256": "194a103cfdf691ce1222383d82ef645d5f81dfef66a4669eaa582b3b1061072b",
+      "threshold_from_validation": 0.5951942801475525,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 114,
+        "tn": 108,
+        "fp": 0,
+        "fn": 0,
+        "n": 222,
+        "roc_auc": 1.0,
+        "epoch": 7,
+        "val_loss": 0.0035810092893328073
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s42",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\selfcon__simclr__s42\\model.pt",
+      "checkpoint_sha256": "26c805c8ac4dd4ac0d748ec11f4b3859835ba5e05efc4076ad5d8b7bc203af22",
+      "threshold_from_validation": 0.44656553864479065,
+      "validation": {
+        "accuracy": 0.9865,
+        "balanced_accuracy": 0.9868,
+        "precision_dead": 1.0,
+        "recall_dead": 0.9737,
+        "recall_alive": 1.0,
+        "f1_dead": 0.9867,
+        "tp": 111,
+        "tn": 108,
+        "fp": 0,
+        "fn": 3,
+        "n": 222,
+        "roc_auc": 0.9993,
+        "epoch": 22,
+        "val_loss": 0.04895379464788638
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s43",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\selfcon__simclr__s43\\model.pt",
+      "checkpoint_sha256": "0599db88d51e49f646c5770f864ffa439fb5e3311d7c80047dbd21443cbd8044",
+      "threshold_from_validation": 0.4837837517261505,
+      "validation": {
+        "accuracy": 0.9865,
+        "balanced_accuracy": 0.9864,
+        "precision_dead": 0.9826,
+        "recall_dead": 0.9912,
+        "recall_alive": 0.9815,
+        "f1_dead": 0.9869,
+        "tp": 113,
+        "tn": 106,
+        "fp": 2,
+        "fn": 1,
+        "n": 222,
+        "roc_auc": 0.9987,
+        "epoch": 7,
+        "val_loss": 0.0784551811901939
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s44",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\selfcon__simclr__s44\\model.pt",
+      "checkpoint_sha256": "194ccd6f45bf1c525cc069140566980f562ff83fc400940399a8007b90d9cb78",
+      "threshold_from_validation": 0.755456805229187,
+      "validation": {
+        "accuracy": 0.9955,
+        "balanced_accuracy": 0.9954,
+        "precision_dead": 0.9913,
+        "recall_dead": 1.0,
+        "recall_alive": 0.9907,
+        "f1_dead": 0.9956,
+        "tp": 114,
+        "tn": 107,
+        "fp": 1,
+        "fn": 0,
+        "n": 222,
+        "roc_auc": 1.0,
+        "epoch": 10,
+        "val_loss": 0.04970240991505453
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s42",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\supcon__stacked_randaug__s42\\model.pt",
+      "checkpoint_sha256": "450909be5954a63ab27383ce60427e5ce40d8d5acb40b48339bd6212e494c898",
+      "threshold_from_validation": 0.7030916213989258,
+      "validation": {
+        "accuracy": 0.9955,
+        "balanced_accuracy": 0.9954,
+        "precision_dead": 0.9913,
+        "recall_dead": 1.0,
+        "recall_alive": 0.9907,
+        "f1_dead": 0.9956,
+        "tp": 114,
+        "tn": 107,
+        "fp": 1,
+        "fn": 0,
+        "n": 222,
+        "roc_auc": 1.0,
+        "epoch": 1,
+        "val_loss": 0.023932953530413515
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s43",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\supcon__stacked_randaug__s43\\model.pt",
+      "checkpoint_sha256": "f17f38d17c4ab9d5795ff717fd8cb31e845753cfad1edf68f204156a227dffe8",
+      "threshold_from_validation": 0.7353496551513672,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 114,
+        "tn": 108,
+        "fp": 0,
+        "fn": 0,
+        "n": 222,
+        "roc_auc": 1.0,
+        "epoch": 2,
+        "val_loss": 0.010892007666655573
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s44",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_pio_dev2\\supcon__stacked_randaug__s44\\model.pt",
+      "checkpoint_sha256": "c83346aa8596575e876152b0bae5332258661e5c37c7d70f8eb1140c0bb81919",
+      "threshold_from_validation": 0.509610116481781,
+      "validation": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "precision_dead": 1.0,
+        "recall_dead": 1.0,
+        "recall_alive": 1.0,
+        "f1_dead": 1.0,
+        "tp": 114,
+        "tn": 108,
+        "fp": 0,
+        "fn": 0,
+        "n": 222,
+        "roc_auc": 1.0,
+        "epoch": 1,
+        "val_loss": 0.01284476241551906
+      }
+    }
+  ]
+}

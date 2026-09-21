@@ -1,0 +1,20 @@
+{
+  "stats": {
+    "train": {
+      "alive": 192,
+      "dead": 184,
+      "total": 376
+    },
+    "val": {
+      "alive": 108,
+      "dead": 114,
+      "total": 222
+    }
+  },
+  "total_alive": 300,
+  "total_dead": 298,
+  "skipped": {
+    "pio_terlalu_kecil": 655
+  },
+  "leakage": []
+}

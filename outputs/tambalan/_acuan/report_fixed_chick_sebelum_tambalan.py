@@ -4,7 +4,6 @@ from __future__ import annotations
 import argparse
 import json
 from collections import defaultdict
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,109 +35,9 @@ def keluarga(row: dict, data: dict | None = None) -> str:
         # config_snapshot per baris; jatuh ke aturan nama berkas supaya
         # laporan lama tetap terbit sama persis.
         return "eq48" if "eq_dev" in row["registry"] else "asli"
-    varian = ("asli" if not eq.get("enabled")
-              else f"eq{int(eq.get('target_short_side', 96))}")
-    nama_susunan = susunan(row)
-    return f"{nama_susunan}/{varian}" if nama_susunan else varian
-
-
-def susunan(row: dict) -> str:
-    """
-    Identitas SUSUNAN DATA sebuah run, terpisah dari varian crop-nya.
-
-    Tanpa ini `keluarga()` hanya menyebut apakah crop di-equalize, sehingga
-    dua susunan data yang berbeda (mis. 392 crop satu domain mati vs 598
-    crop dua domain mati) jatuh ke baris tabel yang sama dan dirata-ratakan
-    diam-diam kalau kedua registry pernah dilewatkan dalam satu perintah
-    (lihat domain_mati_kedua.md bagian 4e).
-
-    Dibaca dari nama folder crop di config snapshot - sumber yang sama yang
-    menentukan gambar mana yang benar-benar dilatih. Kembalikan "" untuk
-    rekaman lama yang tidak menyimpan snapshot, supaya laporan yang sudah
-    ter-commit terbit byte-identik.
-    """
-    crops = (row.get("config_snapshot") or {}).get("crops", {})
-    out_dir = str(crops.get("out_dir") or "")
-    if not out_dir:
-        return ""
-    nama = out_dir.replace("\\", "/").rstrip("/").split("/")[-1]
-    return nama[len("crops_"):] if nama.startswith("crops_") else nama
-
-
-def _kontrak_dari_registry(data: dict) -> dict:
-    """
-    Gabungkan `data_contract` dari seluruh registry yang dipakai benchmark.
-
-    Kembalikan {} kalau satu pun registry tidak terbaca, supaya pemanggilnya
-    jatuh ke teks lama dan laporan lama tetap terbit byte-identik. Sumber
-    digabung sebagai himpunan lalu diurutkan, jadi urutan registry di
-    baris perintah tidak mengubah kalimatnya.
-    """
-    jalur = []
-    for rekaman in (data.get("interventions") or {}).values():
-        for row in rekaman:
-            r = row.get("registry")
-            if r and r not in jalur:
-                jalur.append(r)
-    if not jalur:
-        return {}
-    hidup, mati = set(), set()
-    for r in jalur:
-        try:
-            k = (json.loads(Path(r).read_text(encoding="utf-8"))
-                 .get("data_contract") or {})
-        except (OSError, ValueError):
-            return {}
-        if not k:
-            return {}
-        for kunci, tujuan in (("alive", hidup), ("dead", mati)):
-            nilai = k.get(kunci)
-            if isinstance(nilai, str):
-                tujuan.add(nilai)
-            elif isinstance(nilai, (list, tuple)):
-                tujuan.update(str(x) for x in nilai)
-    # Susunan LAMA (satu sumber mati) harus tetap menghasilkan kalimat yang
-    # sama persis seperti sebelum tambalan, supaya laporan babak 14 yang sudah
-    # ter-commit terbit byte-identik. Yang diperbaiki tambalan ini adalah
-    # susunan yang kelas matinya berisi LEBIH dari satu sumber - di sanalah
-    # kalimat lama diam-diam salah (domain_mati_kedua.md bagian 4f).
-    if hidup == {"PIO/pio_gt/cctv"} and mati == {"Roboflow/coco_gt/closeup"}:
-        return {}
-    return {"alive": sorted(hidup), "dead": sorted(mati)}
-
-
-def kalimat_kontrak(data: dict) -> str:
-    """
-    Susun kalimat sumber train/validation dari `data_contract` registry.
-
-    Semula kalimat ini dipaku: "ayam hidup PIO + ayam mati Roboflow". Itu benar
-    selama hanya ada satu susunan data, tapi DIAM-DIAM salah untuk lengan yang
-    kelas matinya berisi dua sumber (lihat domain_mati_kedua.md bagian 4f).
-    Sekarang dibaca dari registry, yang sendiri dibaca dari manifest.
-    """
-    kontrak = (data.get("data_contract") or {})
-    if not kontrak:
-        # eval_fixed_chick.py tidak menyalin data_contract ke keluarannya, jadi
-        # baca dari registry yang namanya tercatat di tiap rekaman. Registry
-        # itulah yang membekukan susunan data saat checkpoint dibuat.
-        kontrak = _kontrak_dari_registry(data)
-    if not kontrak:
-        # JSON lama tidak menyimpan data_contract dan registry-nya tidak
-        # terbaca; pertahankan teks semula supaya laporan yang sudah
-        # ter-commit terbit byte-identik.
-        return ("Train dan validation hanya memakai ayam hidup PIO + "
-                "ayam mati Roboflow.")
-
-    def daftar(kunci: str) -> str:
-        nilai = kontrak.get(kunci)
-        if isinstance(nilai, str):
-            return nilai
-        if isinstance(nilai, (list, tuple)) and nilai:
-            return " + ".join(str(x) for x in nilai)
-        return "?"
-
-    return (f"Train dan validation hanya memakai ayam hidup {daftar('alive')} "
-            f"dan ayam mati {daftar('dead')}.")
+    if not eq.get("enabled"):
+        return "asli"
+    return f"eq{int(eq.get('target_short_side', 96))}"
 
 
 def aggregate(records: list[dict]) -> list[dict]:
@@ -166,7 +65,7 @@ def write_report(path, data: dict, aggregates: list[dict]) -> None:
     lines = [
         "# Benchmark Test Ayam Tetap", "",
         "## Kontrak", "",
-        kalimat_kontrak(data) + " "
+        "Train dan validation hanya memakai ayam hidup PIO + ayam mati Roboflow. "
         "Seluruh 18 frame ayam/chick dipakai sebagai test. Tidak ada angka test "
         "yang dipakai memilih epoch, threshold, seed, checkpoint, atau scorer.", "",
         "Benchmark ini **retrospektif**, karena dataset chick sudah pernah dibaca "
@@ -230,29 +129,14 @@ def write_report(path, data: dict, aggregates: list[dict]) -> None:
 def plot(path, aggregates: list[dict]) -> None:
     methods = ["selfcon", "supcon", "ce"]
     scorers = list(COLORS)
-    # Nama keluarga TIDAK boleh dipaku ke ("asli", "eq48"): sejak keluarga()
-    # memuat identitas susunan data (lihat domain_mati_kedua.md bagian 4e),
-    # lengan dev2 memakai nama "pio_dev2/asli" dan "pio_dev2_eq/eq48". Memaku
-    # dua nama lama membuat plot melempar KeyError untuk susunan baru mana pun.
-    families = sorted({r["family"] for r in aggregates})
-    fig, axes = plt.subplots(1, max(len(families), 1),
-                             figsize=(6 * max(len(families), 1), 4.8),
-                             sharey=True, squeeze=False)
-    axes = list(axes[0])
-    for ax, family in zip(axes, families):
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.8), sharey=True)
+    for ax, family in zip(axes, ("asli", "eq48")):
         x = np.arange(len(methods)); width = 0.24
         for offset, scorer in enumerate(scorers):
             rows = {(r["method"], r["scorer"]): r for r in aggregates
                     if r["family"] == family}
-            # Metode yang tidak ada di keluarga ini digambar sebagai batang
-            # kosong (nan), bukan melempar KeyError. Sebuah lengan boleh saja
-            # belum punya ketiga metode saat plot dibuat.
-            if not any((m, scorer) in rows for m in methods):
-                continue
-            means = [rows[(m, scorer)]["pooled_ap"]["mean"] if (m, scorer) in rows
-                     else float("nan") for m in methods]
-            stds = [rows[(m, scorer)]["pooled_ap"]["std"] if (m, scorer) in rows
-                    else 0.0 for m in methods]
+            means = [rows[(method, scorer)]["pooled_ap"]["mean"] for method in methods]
+            stds = [rows[(method, scorer)]["pooled_ap"]["std"] for method in methods]
             ax.bar(x + (offset - 1) * width, means, width=width - 0.02,
                    yerr=stds, color=COLORS[scorer], label=scorer, capsize=3)
         ax.set_title(f"PIO {family}")
