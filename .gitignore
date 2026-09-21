@@ -77,3 +77,29 @@ data/crops_pio_eq_dev/dead/
 
 # Worktree agent Claude Code (bukan bagian hasil)
 .claude/
+
+# ------------------------------------------------------------
+# Uji kewarasan non-ayam. Ubin SDNET2018 (8400 berkas) dibangun
+# ulang dari zip resmi; manifest & ringkasannya tetap di-commit
+# supaya susunan splitnya bisa diperiksa orang lain.
+# Hasilkan ulang: python src/build_manifest_sdnet.py
+# ------------------------------------------------------------
+data/crops_sdnet/retak/
+data/crops_sdnet/utuh/
+outputs/runs_sdnet/
+
+# Dataset sumber pihak ketiga - besar, punya lisensi sendiri,
+# tidak disebarkan ulang lewat repo ini. Tautannya ada di laporan.
+data/non ayam/
+data/ayam mati no paper/
+*.zip
+
+# Lengan development 2 (dua domain ayam mati). Gambar tidak di-commit;
+# manifest.csv, crops_summary.json dan dev_split_lock.json tetap dilacak
+# karena itulah yang mengunci protokolnya.
+data/crops_pio_dev2/alive/
+data/crops_pio_dev2/dead/
+data/crops_pio_dev2_eq/alive/
+data/crops_pio_dev2_eq/dead/
+outputs/runs_pio_dev2/
+outputs/runs_pio_dev2_eq/

@@ -1,0 +1,4 @@
+aug,method,diagonal,n_seeds,seeds,test_bacc_mean,test_bacc_std,test_tuned_mean,test_tuned_std,test_auc_mean,test_auc_std,test_accuracy,test_recall_dead,test_recall_alive,test_f1_dead,val_bacc_mean,policy_contrastive,policy_head
+hier_addone,ce,1,3,42 43 44,0.7994,0.012,0.8009,0.0135,0.8403,0.0079,0.8482,0.7041,0.8947,0.6934,0.8455,-,hier_addone
+simclr,selfcon,1,3,42 43 44,0.7603,0.0224,0.7563,0.0191,0.8035,0.0051,0.7944,0.6939,0.8268,0.6222,0.7811,simclr,minimal
+stacked_randaug,supcon,1,3,42 43 44,0.7882,0.0071,0.7844,0.0089,0.8573,0.002,0.8225,0.7211,0.8552,0.6651,0.8276,stacked_randaug,minimal

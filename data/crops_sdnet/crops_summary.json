@@ -1,0 +1,33 @@
+{
+  "total": 8400,
+  "per_split": {
+    "train": {
+      "retak": 299,
+      "utuh": 891
+    },
+    "test": {
+      "retak": 98,
+      "utuh": 304
+    },
+    "val": {
+      "retak": 103,
+      "utuh": 305
+    },
+    "test_wall": {
+      "retak": 800,
+      "utuh": 2400
+    },
+    "test_pave": {
+      "retak": 800,
+      "utuh": 2400
+    }
+  },
+  "foto_per_split": {
+    "train": 32,
+    "test": 11,
+    "val": 11,
+    "test_wall": 72,
+    "test_pave": 104
+  },
+  "dilewati": {}
+}

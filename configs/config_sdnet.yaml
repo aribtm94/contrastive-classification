@@ -1,0 +1,288 @@
+# =============================================================================
+# UJI KEWARASAN PIPELINE - SDNET2018 (retak beton), BUKAN ayam
+# =============================================================================
+#
+# KENAPA ADA BERKAS INI
+# ---------------------
+# Pada data ayam, setiap angka tinggi selalu bisa dilacak ke jalan pintas:
+# ketajaman (bacc 0.9231), `label = domain`, dan saturasi (AUC 0.883 TANPA
+# model, mengalahkan seluruh 18 checkpoint yang terbaiknya 0.792). Karena itu
+# satu pertanyaan tidak pernah bisa dijawab: yang rusak pipelinenya, atau
+# datanya?
+#
+# SDNET2018 menjawabnya. Diukur sebelum config ini ditulis, baseline ciri
+# sederhana tanpa model pada 400 sampel/kelas per sub-domain:
+#
+#     sub-domain   saturasi  terang  ketajaman  ukuran_byte
+#     deck            0.542   0.543      0.629        0.607
+#     pavement        0.514   0.523      0.606        0.581
+#     wall            0.536   0.653      0.592        0.544
+#
+# Tertinggi 0.653 - praktis tidak ada jalan pintas. Bandingkan 0.883 pada ayam.
+# Jadi kalau pipeline yang SAMA PERSIS berhasil di sini, masalah skripsi ada di
+# data ayam. Kalau gagal di sini juga, masalahnya di kode/metode.
+#
+# ATURAN YANG MENGIKAT BERKAS INI
+# -------------------------------
+# Blok `classifier` dan `augmentation` disalin APA ADANYA dari
+# configs/config.yaml. Jangan disetel ulang untuk mengejar angka: begitu
+# arsitektur atau augmentasinya berubah, ini bukan lagi uji pipeline yang sama
+# dan kehilangan seluruh maknanya.
+#
+# Termasuk yang sengaja TIDAK diubah walau secara teknis boleh:
+#   - kolam RandAugment tetap tanpa Rotate/ShearX/ShearY. Untuk retak beton
+#     rotasi sebenarnya aman (retak tidak punya orientasi baku seperti ayam
+#     tergeletak), tapi yang diuji adalah pipeline apa adanya.
+#   - `image_size: 224` + letterbox, walau ubin SDNET sudah kotak 256x256
+#     sehingga letterbox tidak memberi bantalan abu-abu sama sekali. Ini
+#     justru menguntungkan: kebocoran bantalan letterbox yang pernah ditemukan
+#     pada crop ayam tidak mungkin terjadi di sini.
+#
+# TIDAK ADA blok `protocol:` di berkas ini - disengaja. Tanpa
+# `development_only`, src/train.py memakai jalur train/val/test tiga arah biasa
+# dan validate_development_manifest (penjaga khusus ayam: kontrak PIO+Roboflow,
+# hash split lock, jumlah 237/155) tidak aktif. Tidak satu pun penjaga ayam
+# perlu dilonggarkan demi dataset ini.
+
+seed: 42
+device: auto
+
+# --- Tahap 1: Deteksi ------------------------------------------------------
+# TIDAK DIPAKAI. SDNET2018 adalah ubin gambar tanpa objek untuk dideteksi;
+# labelnya melekat pada ubin, bukan pada bounding box. Yang diuji di sini
+# adalah tahap 2 (classifier kontrastif) - satu-satunya tahap yang masih
+# diragukan. Detektor YOLO sudah selesai dan terukur: recall 100%.
+
+# --- Tahap 2: Sumber data --------------------------------------------------
+crops:
+  # Zip bersarang asli dari Utah State University, DOI 10.15142/T3TD19,
+  # lisensi CC BY. Isi: 56.092 ubin JPG 256x256 dari 230 foto sumber
+  # (54 deck, 72 wall, 104 pavement), kamera Nikon 16 MP.
+  sdnet_zip: "data/non ayam/DATA_Maguire_20180517_ALL_2.zip"
+
+  out_dir: "data/crops_sdnet"
+  manifest: "data/crops_sdnet/manifest.csv"
+
+  # ---------------------------------------------------------------------
+  # RANCANGAN LINTAS DOMAIN
+  #
+  # Latih di deck saja; wall dan pavement TIDAK PERNAH disentuh saat latih.
+  # Ini meniru pola generalisasi skripsi (latih satu domain, uji domain
+  # lain) pada data yang bebas jalan pintas.
+  #
+  #   deck      -> split train / val / test  (test = in-domain)
+  #   wall      -> split test_wall           (hold-out penuh)
+  #   pavement  -> split test_pave           (hold-out penuh)
+  # ---------------------------------------------------------------------
+  train_domain: deck
+  holdout_domains: [wall, pavement]
+
+  # Jumlah ubin yang diambil. Positif = retak.
+  # Rasio 1:3 mengikuti max_alive_per_dead pada susunan ayam supaya
+  # ketimpangan kelasnya sebanding.
+  n_retak_train_domain: 500
+  n_utuh_train_domain: 1500
+  n_retak_holdout: 800
+  n_utuh_holdout: 2400
+
+  # Split per FOTO SUMBER, bukan per ubin. Nama berkas memuat id fotonya
+  # (7001-115.jpg -> foto 7001), dan satu foto menyumbang sampai 249 ubin.
+  # Kalau displit per ubin, potongan dari dinding yang sama bocor ke train
+  # dan test sekaligus - persis kesalahan yang aturan proyek larang.
+  split_by_base_image: true
+  split_names: [train, val, test]
+  split_ratio: [0.6, 0.2, 0.2]
+
+  # Ubin SDNET sudah seragam 256x256 dari kamera yang sama, jadi jalan
+  # pintas ketajaman yang menyerang data ayam tidak berlaku di sini
+  # (terukur: 0.592-0.629, bukan 0.9231). Equalization tidak diperlukan.
+  equalize_resolution:
+    enabled: false
+    target_short_side: 96
+
+# --- Tahap 3: Klasifikasi kontrastif ---------------------------------------
+classifier:
+  image_size: 224           # BATAS INPUT: 224x224 (ketentuan)
+  resize_mode: letterbox    # letterbox (jaga rasio aspek) | resize (paksa)
+
+  backbone: resnet18
+  pretrained: true
+  feature_dim: 512          # dimensi output resnet18
+  proj_dim: 128             # dimensi embedding kontrastif
+  proj_hidden: 512
+
+  batch_size: 32
+  num_workers: 0            # 0 = paling aman di Windows
+  temperature: 0.07
+
+  # Tahap kontrastif (metode A & B)
+  epochs_contrastive: 60
+  lr_contrastive: 0.0005
+
+  # Linear probe (encoder dibekukan, hanya kepala klasifikasi dilatih)
+  epochs_probe: 40
+  lr_probe: 0.001
+
+  # Klasifikasi biasa (metode C)
+  epochs_ce: 60
+  lr_ce: 0.0001
+
+  weight_decay: 0.0001
+  class_weighting: true     # tangani ketimpangan hidup vs mati
+
+  # Bobot cross-entropy yang digabung ke SupCon (metode B).
+  # 0.0 = SupCon murni; > 0 = SupCon + CE dilatih bersamaan.
+  supcon_ce_weight: 0.0
+
+  early_stop_patience: 15
+
+
+# --- Augmentasi per metode -------------------------------------------------
+# Tiap metode memakai kebijakan augmentasi dari SATU paper yang berbeda.
+#
+# PERINGATAN ILMIAH: karena augmentasinya berbeda-beda, membandingkan ketiga
+# metode pada DIAGONAL (selfcon+simclr vs supcon+stacked_randaug vs
+# ce+hier_addone) TIDAK lagi mengisolasi fungsi loss - yang berubah dua hal
+# sekaligus. Jalankan `python src/train.py --grid full` sekali sebagai
+# kontrol: kolomnya (augmentasi ditahan, loss divariasikan) memulihkan
+# perbandingan metode yang sah. Lihat outputs/reports/augmentation_report.md.
+#
+# TIDAK ADA ROTASI di kebijakan mana pun, walaupun ketiga paper memakainya.
+# Orientasi (tergeletak vs berdiri tegak) adalah sinyal nyata yang
+# membedakan mati dan hidup di dataset ini; memutar gambar menghapusnya.
+augmentation:
+  by_method:
+    selfcon: {contrastive: simclr,          head: minimal}
+    supcon:  {contrastive: stacked_randaug, head: minimal}
+    ce:      {contrastive: null,            head: hier_addone}
+
+  # Kunci tahap linear probe ke 'minimal' untuk selfcon/supcon.
+  # Alasan: probe mengukur kualitas ENCODER. Kalau augmentasi probe ikut
+  # berbeda per metode, angkanya mencampur dua efek sekaligus. Khosla dkk.
+  # mengukur ini: silang pretrain-aug x probe-aug menggeser top-1 > 3 poin.
+  # Metode 'ce' terpaksa berbeda - tahap kepala adalah satu-satunya tahap
+  # latihnya; asimetri ini ditulis terang-terangan di laporan.
+  lock_probe_policy: true
+
+  # Pengaturan gambar contoh di src/aug_report.py
+  preview_views: 6
+  preview_samples: 4          # 2 hidup + 2 mati
+
+  policies:
+    none:
+      ops: []
+
+    # == perilaku lama augment(strong=False): flip saja ==
+    minimal:
+      ops:
+        - {op: hflip, p: 0.5}
+
+    # == perilaku lama augment(strong=True), disimpan sebagai pembanding ==
+    # Blur k=3/5 di sini TERLALU LEMAH: AUC ketajaman masih 0.851.
+    legacy:
+      ops:
+        - {op: hflip,           p: 0.5}
+        - {op: rrc_iso,         p: 0.7, scale: [0.70, 1.00]}
+        - {op: bright_contrast, p: 0.8, alpha: [0.7, 1.3], beta: [-30, 30]}
+        - {op: hsv,             p: 0.5, sat: [0.6, 1.4], hue: [-8, 8]}
+        - {op: gray,            p: 0.2}
+        - {op: blur,            p: 0.3, kernel: [3, 5]}
+
+    # ---- A. SimCLR - Chen dkk., ICML 2020, Appendix A ------------------
+    # Urutan paper: crop -> flip -> distorsi warna -> grayscale -> blur.
+    # Gambar 5 paper: crop + distorsi warna adalah pasangan TERKUAT
+    # (+23.2 poin di atas crop saja), karena warna/tekstur mentah harus
+    # dimatikan supaya encoder tidak menghafal histogram warna.
+    # Blur kernel = 10% sisi gambar = 23 px pada 224 - jauh lebih kuat
+    # daripada k=3/5 versi lama, dan itulah yang langsung menyerang
+    # jalan pintas ketajaman (lihat laporan).
+    simclr:
+      ops:
+        - {op: rrc,          p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333]}
+        - {op: hflip,        p: 0.5}
+        - {op: color_jitter, p: 0.8, strength: 1.0}
+        - {op: gray,         p: 0.2}
+        - {op: blur,         p: 0.5, kernel_frac: 0.10, sigma: [0.1, 2.0]}
+
+    # ---- B. Stacked RandAugment - Khosla dkk., NeurIPS 2020 -------------
+    # Paper SupCon TIDAK mendefinisikan augmentasinya sendiri; ia
+    # membandingkan AutoAugment / RandAugment / SimAugment / Stacked
+    # RandAugment, dan yang terakhir terbaik untuk ResNet dalam.
+    # "Stacked" = rangkaian 2 op dijalankan DUA KALI berurutan.
+    # SENGAJA TANPA Gaussian blur (blur bukan bagian RandAugment), supaya
+    # kontras blur-vs-tanpa-blur terlihat jelas di tabel kebocoran.
+    # Rotate/ShearX/ShearY dibuang dari kolam op -> lihat catatan di atas.
+    stacked_randaug:
+      ops:
+        - {op: rrc,     p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333]}
+        - {op: hflip,   p: 0.5}
+        - {op: randaug, p: 1.0, n: 2, magnitude: 9, stacked: true}
+
+    # ---- C. Zhang & Ma, CVPR 2022 - modul augmentasi "add-one" ----------
+    # t0 = crop (selalu), lalu t1..t4 = warna, grayscale, blur, flip PERSIS
+    # urutan paper (urutan ini yang menang: 67.1 vs 64.5 untuk urutan
+    # terburuk). level_sampling meniru "expanded views": tiap sampel
+    # memakai subset T_i dengan i ~ U{1..4}, jadi sebagian pasangan cuma
+    # beda crop+warna (invariansi lemah) dan sebagian beda penuh.
+    #
+    # TIDAK diimplementasikan: loss multi-stage 4-tap, 8 view, dan
+    # augmentation-parameter embedding. Ketiganya mengubah ARSITEKTUR,
+    # sedangkan syarat perbandingan ini adalah arsitektur identik.
+    # Laporan wajib menyebut batasan ini - menyebutnya "metode Zhang"
+    # tanpa catatan itu klaim yang tidak benar.
+    hier_addone:
+      level_sampling: true
+      ops:
+        - {op: rrc,          p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333], level: 0}
+        - {op: color_jitter, p: 0.8, strength: 1.0, level: 1}
+        - {op: gray,         p: 0.2, level: 2}
+        - {op: blur,         p: 0.5, kernel_frac: 0.10, sigma: [0.1, 2.0], level: 3}
+        - {op: hflip,        p: 0.5, level: 4}
+
+# --- Output ----------------------------------------------------------------
+output:
+  runs_dir: "outputs/runs_sdnet"
+  # Direktori laporan SENGAJA dipisah. report.py dan train.py menulis
+  # comparison.csv/md/png/json dengan nama tetap; kalau diarahkan ke
+  # outputs/reports, laporan eksperimen ayam yang sudah di-commit akan
+  # tertimpa oleh angka beton.
+  reports_dir: "outputs/reports_sdnet"
+  predictions_dir: "outputs/predictions"
+
+# Tiga metode yang dibandingkan - identik dengan eksperimen ayam.
+# Kata "hidup/mati" pada deskripsi supcon di config master diganti jadi
+# "utuh/retak" supaya keluaran log tidak menyesatkan; logikanya sama persis.
+methods:
+  selfcon: "Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe"
+  supcon:  "Supervised Contrastive - label utuh & retak digabung dalam loss"
+  ce:      "Klasifikasi biasa (Cross-Entropy) - baseline"
+
+# Istilah laporan. Tanpa blok ini report.py memakai bawaannya, yaitu kalimat
+# eksperimen ayam ("Ayam Mati vs Hidup", "crop ayam hidup median 83 px"),
+# yang untuk ubin beton retak bukan cuma salah nama - angkanya juga salah.
+# Lihat ISTILAH di src/report.py.
+report:
+  istilah:
+    judul: "Retak vs Utuh (SDNET2018 - uji kewarasan pipeline)"
+    positif: "ubin RETAK"
+    pos: "retak"
+    neg: "utuh"
+    pos_panjang: "ubin retak"
+    neg_panjang: "ubin utuh"
+    # Dikosongkan dengan sengaja: pada SDNET tidak ada sebab bawaan yang
+    # membuat ketajaman menandai kelas, dan lantai sesungguhnya di sini
+    # bukan ketajaman (0.5713) melainkan std_terang (0.6430) - lihat
+    # outputs/reports/shortcut_sdnet_lintas.json.
+    sebab_lantai: ""
+    # Di SDNET validation TIDAK jenuh (val AUC 0.87-0.89, checkpoint terpilih
+    # epoch 16-39), berbeda dari data ayam yang val AUC-nya 1.0000 di epoch 1-2.
+    # Kalimat "ambang tidak bisa dikalibrasi karena val jenuh" adalah temuan
+    # data ayam, bukan sifat pipeline, jadi tidak boleh ikut tercetak di sini.
+    val_jenuh: false
+
+  # Ciri kandidat untuk LANTAI laporan. Tanpa daftar ini report.py memakai
+  # ketajaman saja - dan di SDNET ketajaman justru ciri paling LEMAH (0.5713),
+  # sementara std_terang mengikat di 0.6430. Memakai ketajaman di sini sama
+  # dengan menurunkan palang ujiannya sendiri. Ciri dipilih dari skor TRAIN,
+  # tidak pernah dari test.
+  lantai_ciri: [ketajaman, saturasi, terang, hue, std_terang]
