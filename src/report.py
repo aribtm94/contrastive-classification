@@ -118,10 +118,15 @@ def sharpness_floor(cfg: dict) -> dict:
         return np.array(y), np.array(v, dtype=float)
 
     ytr, vtr = feats("train")
-    yte, vte = feats("test")
+    # Lantai WAJIB diukur di split yang sama dengan skor model yang akan
+    # dibandingkan dengannya. Lantai dari test vs skor dari val = dua populasi,
+    # dan perbandingannya tidak berarti apa pun.
+    yte, vte = feats(split_eval(cfg))
 
     # Arah hanya dicari kalau ciri dipilih lewat config. Pada jalur bawaan
     # arahnya dipaku +1 supaya angka lantai laporan ayam tetap persis sama.
+    # Jalur bawaan juga cuma punya SATU ciri, jadi tidak ada pemilihan yang
+    # bisa berubah - laporan ayam lama aman tanpa syarat.
     arah_dicari = bool(daftar)
     terbaik = None
     for j, n in enumerate(nama_ciri):
@@ -140,8 +145,14 @@ def sharpness_floor(cfg: dict) -> dict:
         cand = {"ciri": n, "threshold": best_t, "arah": best_s,
                 "bacc_train": best_b, "bacc": _bacc(yte, pred_te.astype(int)),
                 "auc": roc_auc(yte, skor_te), "n_test": int(len(yte))}
-        # Dipilih berdasarkan skor TRAIN, tidak pernah skor test.
-        if terbaik is None or cand["bacc_train"] > terbaik["bacc_train"]:
+        # Ciri pengikat dipilih dengan aturan yang SAMA seperti gerbang
+        # (eval_shortcut_baseline.py:153): AUC-terarah tertinggi di split
+        # evaluasi. Dua aturan berbeda untuk satu besaran = dua angka lantai
+        # yang diam-diam beda; di lengan campur_eq selisih train_bacc 0.0012
+        # membalik palang dari 0.7136 ke 0.5985. AMBANG tetap dicocokkan di
+        # train (best_t di atas) - yang dipilih di sini cuma ciri mana yang
+        # jadi palang, dan palang wajib = kebocoran TERBESAR yang ada.
+        if terbaik is None or cand["auc"] > terbaik["auc"]:
             terbaik = cand
     if terbaik is None:
         raise SystemExit("report.lantai_ciri kosong: tidak ada ciri lantai "
@@ -152,6 +163,19 @@ def sharpness_floor(cfg: dict) -> dict:
 # --------------------------------------------------------------------------- #
 # Pemuatan & agregasi atas seed
 # --------------------------------------------------------------------------- #
+def split_eval(cfg: dict) -> str:
+    """Split yang dipakai sebagai EVALUASI AKHIR laporan ini.
+
+    Lengan development_only (protocol.development_only: true) sengaja tidak
+    punya split test - test ditahan supaya tidak terpakai selama pengembangan.
+    Untuk lengan itu laporan dibuat di atas val, dan NAMA "val" ikut sampai ke
+    kolom CSV, judul tabel, sumbu grafik dan prosa. Memetakannya diam-diam ke
+    kolom test_* akan menerbitkan angka val dengan label test - salah lapor
+    pada metrik utama.
+    """
+    return "val" if (cfg.get("protocol") or {}).get("development_only") else "test"
+
+
 def _agg(vals: list[float]) -> tuple[float, float]:
     a = np.array([v for v in vals if v is not None and not np.isnan(v)])
     if len(a) == 0:
@@ -213,16 +237,35 @@ def load_results(cfg: dict) -> list[dict]:
     if not groups:
         raise SystemExit("Belum ada hasil. Jalankan dulu: python src/train.py")
 
+    # train.py menulis blok "test" untuk lengan biasa dan "validation" untuk
+    # lengan development_only (src/train.py:676 memakai kunci "validation";
+    # run lama memakai "val"). Ketiganya dibaca lewat satu fungsi supaya tidak
+    # ada cabang yang lupa diperbarui.
+    ev = split_eval(cfg)
+
+    def blok(r: dict) -> dict:
+        if ev == "test":
+            return r["test"]
+        b = r.get("validation") or r.get("val")
+        if b is None:
+            raise SystemExit(
+                f"run tanpa blok validation/val padahal config ini "
+                f"development_only: {r.get('method')} seed {r.get('seed')}")
+        return b
+
     out = []
     for (aug, method), rs in groups.items():
-        bm, bs = _agg([r["test"]["balanced_accuracy"] for r in rs])
+        bm, bs = _agg([blok(r)["balanced_accuracy"] for r in rs])
+        # test_tuned tidak ada di lengan development_only: ambangnya justru
+        # DIPILIH di val, jadi "val @tau" akan mengukur dirinya sendiri.
+        # Dibiarkan NaN -> fmt() mencetak "-", bukan angka palsu.
         tm, ts = _agg([r.get("test_tuned", {}).get("balanced_accuracy")
                        for r in rs])
-        am, asd = _agg([r["test"].get("roc_auc") for r in rs])
-        rdm, _ = _agg([r["test"]["recall_dead"] for r in rs])
-        ram, _ = _agg([r["test"]["recall_alive"] for r in rs])
-        accm, _ = _agg([r["test"]["accuracy"] for r in rs])
-        f1m, _ = _agg([r["test"]["f1_dead"] for r in rs])
+        am, asd = _agg([blok(r).get("roc_auc") for r in rs])
+        rdm, _ = _agg([blok(r)["recall_dead"] for r in rs])
+        ram, _ = _agg([blok(r)["recall_alive"] for r in rs])
+        accm, _ = _agg([blok(r)["accuracy"] for r in rs])
+        f1m, _ = _agg([blok(r)["f1_dead"] for r in rs])
         # Run lama memakai kunci "val", run baru "validation"
         # (src/train.py:676). Keduanya dibaca supaya hasil lama
         # tetap terbit dan hasil baru tidak menabrak KeyError.
@@ -248,7 +291,10 @@ def load_results(cfg: dict) -> list[dict]:
             "accuracy": accm, "f1_dead": f1m, "val_bacc": vm,
             "description": rs[0].get("description", ""),
             "n_train": rs[0]["n_train"], "n_val": rs[0]["n_val"],
-            "n_test": rs[0]["n_test"],
+            # n_test tidak ditulis oleh run development_only; n_eval yang
+            # dipakai laporan, dan namanya menyebut split mana.
+            "n_test": rs[0].get("n_test"),
+            "n_eval": rs[0].get("n_test") if ev == "test" else rs[0]["n_val"],
         })
 
     order = {m: i for i, m in enumerate(ORDER)}
@@ -277,11 +323,24 @@ def fmt(m: float, s: float) -> str:
 
 
 def write_csv(res: list[dict], cfg: dict, path) -> None:
+    # Awalan kolom = split yang benar-benar diukur. Untuk config biasa
+    # hasilnya persis sama seperti sebelumnya (test_*); untuk lengan
+    # development_only jadi val_* supaya tidak ada yang membaca angka val
+    # sebagai angka test.
+    ev = split_eval(cfg)
+    # Kolom val_bacc_mean adalah bacc validation yang dipakai MEMILIH
+    # checkpoint. Di config biasa ia berdampingan dengan kolom test_* dan
+    # keduanya berbeda. Di lengan development_only evaluasinya sudah val,
+    # jadi kolom itu akan mengulang val_bacc_mean dengan angka yang sama
+    # persis - dua kolom bernama identik dalam satu CSV, yang bikin pembaca
+    # csv mana pun mengambil salah satunya diam-diam. Karena itu dibuang
+    # di lengan tanpa test, bukan diberi nama lain.
+    kol_val = ["val_bacc_mean"] if ev == "test" else []
     cols = ["aug", "method", "diagonal", "n_seeds", "seeds",
-            "test_bacc_mean", "test_bacc_std", "test_tuned_mean",
-            "test_tuned_std", "test_auc_mean", "test_auc_std",
-            "test_accuracy", "test_recall_dead", "test_recall_alive",
-            "test_f1_dead", "val_bacc_mean",
+            f"{ev}_bacc_mean", f"{ev}_bacc_std", f"{ev}_tuned_mean",
+            f"{ev}_tuned_std", f"{ev}_auc_mean", f"{ev}_auc_std",
+            f"{ev}_accuracy", f"{ev}_recall_dead", f"{ev}_recall_alive",
+            f"{ev}_f1_dead", *kol_val,
             "policy_contrastive", "policy_head"]
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="", encoding="utf-8") as f:
@@ -295,7 +354,7 @@ def write_csv(res: list[dict], cfg: dict, path) -> None:
                         round(r["auc_mean"], 4), round(r["auc_std"], 4),
                         round(r["accuracy"], 4), round(r["recall_dead"], 4),
                         round(r["recall_alive"], 4), round(r["f1_dead"], 4),
-                        round(r["val_bacc"], 4),
+                        *([round(r["val_bacc"], 4)] if ev == "test" else []),
                         r.get("policy_contrastive") or "-",
                         r.get("policy_head") or "-"])
 
@@ -359,22 +418,53 @@ def write_md(res: list[dict], cfg: dict, floor: dict, path) -> None:
     # Jumlah seed sebenarnya, bukan angka tetap. Laporan lama menyebut
     # "5 seed" karena grid ayam memang 5; SDNET memakai 3.
     n_seed_maks = max((r["n_seeds"] for r in res), default=0)
-    # Cacah kelas di test dibaca dari manifest, bukan ditulis tangan.
-    y_te = np.array([int(r["label"]) for r in read_manifest(cfg, "test")])
+    # Nama split evaluasi dipakai APA ADANYA di seluruh prosa. Untuk config
+    # biasa nilainya "test" sehingga tiap kalimat di bawah berbunyi persis
+    # seperti versi sebelumnya; untuk lengan development_only jadi "val", dan
+    # pembaca langsung melihat bahwa angkanya bukan test.
+    ev = split_eval(cfg)
+    EV = ev.upper()
+    # Cacah kelas di split evaluasi, dibaca dari manifest, bukan ditulis tangan.
+    y_te = np.array([int(r["label"]) for r in read_manifest(cfg, ev)])
     n_pos_te, n_neg_te = int((y_te == 1).sum()), int((y_te == 0).sum())
+    # Peringatan yang HANYA muncul di lengan tanpa test. Ditaruh di paling
+    # atas laporan, bukan di catatan kaki: kalau seseorang cuma membaca tabel
+    # pertama, justru kalimat ini yang wajib sudah terbaca.
+    catatan_dev = ([
+        f"> **Angka di laporan ini diukur di split VAL, bukan test.** Lengan "
+        f"ini memakai `protocol.development_only`, jadi manifestnya memang "
+        f"tidak punya split test - test ditahan supaya tidak terpakai selama "
+        f"pengembangan. Konsekuensinya mengikat cara membaca seluruh tabel: "
+        f"val dipakai memilih checkpoint DAN ambang, jadi angka val di sini "
+        f"optimistis dan **bukan** estimasi kemampuan pada data baru. Kolom "
+        f"`@tau` sengaja kosong - ambangnya dipilih di val, jadi 'val @tau' "
+        f"akan mengukur dirinya sendiri.", ""]
+        if ev != "test" else [])
 
     lines = [
         f"# Perbandingan Metode x Augmentasi - {ist['judul']}", "",
-        f"Data: train {n['n_train']} / val {n['n_val']} / test {n['n_test']} "
-        f"crop, ukuran input {cfg['classifier']['image_size']}x"
+    ] + catatan_dev + [
+        (f"Data: train {n['n_train']} / val {n['n_val']} / test {n['n_test']} "
+         if ev == "test" else
+         f"Data: train {n['n_train']} / val {n['n_val']} (tanpa test) "
+        ) + f"crop, ukuran input {cfg['classifier']['image_size']}x"
         f"{cfg['classifier']['image_size']} ({cfg['classifier']['resize_mode']}), "
         f"backbone {cfg['classifier']['backbone']}.", "",
         f"Kelas positif = {ist['positif']}. Metrik utama = **balanced accuracy** "
         "(rata-rata recall kedua kelas), karena jumlah kelasnya timpang.", "",
         "Tiap konfigurasi dijalankan beberapa seed; yang dilaporkan "
         "**mean ± simpangan baku**. `@0.5` = ambang bawaan, `@tau` = ambang "
-        "yang dikalibrasi di **validation set** (tidak pernah di test set).",
+        "yang dikalibrasi di **validation set** (tidak pernah di test set)."
+        + ("" if ev == "test" else
+           " Di lengan ini `@tau` kosong karena val-lah yang memilih ambang."),
         "",
+        # HANYA untuk lengan tanpa test. Di config biasa baris ini tidak
+        # ditulis sama sekali supaya comparison.md yang sudah ter-commit
+        # tetap byte-identik - laporan lama yang berubah isinya, walau
+        # kalimatnya benar, membuat artefak ter-commit tidak bisa
+        # direproduksi oleh kode hari ini.
+        *([] if ev == "test" else
+          [f"Semua kolom di bawah diukur di split **{EV}**.", ""]),
         "| Augmentasi | Metode | Bal.Acc @0.5 | Bal.Acc @tau | AUC | "
         f"R.{ist['pos']} | R.{ist['neg']} | n seed |",
         "|---|---|---|---|---|---|---|---|",
@@ -401,7 +491,11 @@ def write_md(res: list[dict], cfg: dict, floor: dict, path) -> None:
         "",
         f"Baris terakhir tabel bukan sebuah model. Itu {lantai_panjang} "
         "saja, dengan satu ambang yang dicocokkan di "
-        "train dan diuji di test - **tanpa melihat isi gambar sama sekali**.",
+        f"train dan diuji di {ev} - **tanpa melihat isi gambar sama sekali**."
+        + ("" if ev == "test" else
+           f" Lantainya diukur di split yang SAMA dengan skor model di "
+           f"atasnya ({ev}); lantai dari split lain tidak bisa dibandingkan "
+           f"dengannya."),
         "",
         (f"Angkanya **{floor['bacc']:.4f}** (AUC {floor['auc']:.4f}). "
          + ist.get("sebab_lantai", "")).strip(), "",
@@ -453,7 +547,7 @@ def write_md(res: list[dict], cfg: dict, floor: dict, path) -> None:
             "(setelah ambang), sedangkan AUC mengukur **urutan**. Keduanya "
             f"bisa berbeda jauh di sini: dengan cuma {n_neg_te} "
             f"{ist['neg_panjang']} di "
-            f"test, ambang yang meleset satu crop saja sudah memotong "
+            f"{ev}, ambang yang meleset satu crop saja sudah memotong "
             f"{poin_satu:.2f} poin bal.acc walau urutannya sempurna.", "",
             f"Lantai {nama_lantai} punya AUC **{floor['auc']:.4f}** - setara "
             f"salah mengurutkan **{round((1-floor['auc'])*npair)} dari "
@@ -497,7 +591,12 @@ def write_md(res: list[dict], cfg: dict, floor: dict, path) -> None:
              "sedikit sekali, jadi AUC setinggi ini lebih mudah terjadi "
              "kebetulan daripada kelihatannya. "
              if min(n_pos_te, n_neg_te) < 40 else "")
-            + "Yang bisa diklaim: **pada test set ini**, urutannya "
+            # Nama split ikut di sini juga. Untuk config biasa ev=="test"
+            # sehingga kalimatnya berbunyi persis sama; untuk lengan
+            # development_only kalimat ini akan menulis "pada val set ini",
+            # yang memang benar - dan yang salah justru kalau dibiarkan
+            # mengklaim test padahal test tidak pernah disentuh.
+            + f"Yang bisa diklaim: **pada {ev} set ini**, urutannya "
             f"mengalahkan lantai di seluruh {n_seed_maks} seed.", "",
         ]
 
@@ -559,10 +658,16 @@ def write_md(res: list[dict], cfg: dict, floor: dict, path) -> None:
             f"yang mengurutkan lebih baik daripada lantai di seluruh "
             f"{n_seed_maks} seed, "
             "dan yang belum beres di situ cuma ambangnya.") if auc_ok else ""),
-        f"- Test set berisi {n['n_test']} crop yang berasal dari hanya "
-        "**7 foto asli**. Selisih kecil antar metode belum tentu bermakna; "
-        "itulah sebabnya simpangan baku antar-seed ikut dilaporkan dan "
-        "harus dibaca bersama rata-ratanya.",
+        (f"- Test set berisi {n['n_test']} crop yang berasal dari hanya "
+         "**7 foto asli**. Selisih kecil antar metode belum tentu bermakna; "
+         "itulah sebabnya simpangan baku antar-seed ikut dilaporkan dan "
+         "harus dibaca bersama rata-ratanya."
+         if ev == "test" else
+         f"- Split {ev} berisi {n['n_eval']} crop ({n_pos_te} "
+         f"{ist['pos_panjang']}, {n_neg_te} {ist['neg_panjang']}). Selisih "
+         "kecil antar metode belum tentu bermakna; itulah sebabnya simpangan "
+         "baku antar-seed ikut dilaporkan dan harus dibaca bersama "
+         "rata-ratanya."),
         "- Akurasi biasa menyesatkan di sini: menebak 'mati' untuk semua "
         "sampel sudah memberi akurasi ~79% tanpa model belajar apa pun. "
         "Karena itu balanced accuracy yang dipakai.",
@@ -636,7 +741,7 @@ def plot(res: list[dict], cfg: dict, floor: dict, path) -> None:
     ax.set_xticks(x)
     ax.set_xticklabels([LABEL.get(m) or m for m in methods], fontsize=9)
     ax.set_ylim(0, 1.22)
-    ax.set_ylabel("balanced accuracy (test set), mean ± std")
+    ax.set_ylabel(f"balanced accuracy ({split_eval(cfg)} set), mean ± std")
     ax.set_title("Metode x augmentasi - arsiran // = pasangan diagonal, "
                  "* = 1 seed (tanpa simpangan baku)", fontsize=10)
     ax.legend(loc="upper left", ncol=max(1, len(augs)), fontsize=9,
