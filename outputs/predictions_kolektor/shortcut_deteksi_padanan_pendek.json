@@ -1,0 +1,89 @@
+{
+  "crops": "_kol_padanan",
+  "features": {
+    "ketajaman": {
+      "threshold": 108.26837531887755,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.8233532934131736,
+      "val_bacc": 0.8513513513513513,
+      "val_auc_raw": 0.10591672753834919,
+      "val_auc": 0.8940832724616508,
+      "test_bacc": 0.8787878787878788,
+      "test_auc_raw": 0.06336088154269971,
+      "test_auc": 0.9366391184573003
+    },
+    "rasio_bbox": {
+      "threshold": 4.08,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.592814371257485,
+      "val_bacc": 0.5675675675675675,
+      "val_auc_raw": 0.4028487947406866,
+      "val_auc": 0.5971512052593134,
+      "test_bacc": 0.5454545454545454,
+      "test_auc_raw": 0.34277114580144885,
+      "test_auc": 0.6572288541985511
+    },
+    "saturasi": {
+      "threshold": 10.606325733418368,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.6437125748502994,
+      "val_bacc": 0.6756756756756757,
+      "val_auc_raw": 0.6873630387143901,
+      "val_auc": 0.6873630387143901,
+      "test_bacc": 0.7171717171717171,
+      "test_auc_raw": 0.7319661259055199,
+      "test_auc": 0.7319661259055199
+    },
+    "terang": {
+      "threshold": 74.10528938137755,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.6197604790419162,
+      "val_bacc": 0.5675675675675675,
+      "val_auc_raw": 0.5463842220598978,
+      "val_auc": 0.5463842220598978,
+      "test_bacc": 0.5555555555555556,
+      "test_auc_raw": 0.587184981124375,
+      "test_auc": 0.587184981124375
+    },
+    "hue": {
+      "threshold": 24.960758131377553,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.6107784431137725,
+      "val_bacc": 0.6081081081081081,
+      "val_auc_raw": 0.6011687363038715,
+      "val_auc": 0.6011687363038715,
+      "test_bacc": 0.6464646464646464,
+      "test_auc_raw": 0.7044179165391287,
+      "test_auc": 0.7044179165391287
+    },
+    "std_terang": {
+      "threshold": 33.79249379814819,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.5868263473053892,
+      "val_bacc": 0.4864864864864865,
+      "val_auc_raw": 0.5047479912344778,
+      "val_auc": 0.5047479912344778,
+      "test_bacc": 0.6313131313131313,
+      "test_auc_raw": 0.3254769921436588,
+      "test_auc": 0.6745230078563411
+    },
+    "ukuran_bbox": {
+      "threshold": 28.0,
+      "sign": 1,
+      "from_pixels": false,
+      "train_bacc": 0.5359281437125749,
+      "val_bacc": 0.5270270270270271,
+      "val_auc_raw": 0.535427319211103,
+      "val_auc": 0.535427319211103,
+      "test_bacc": 0.5202020202020201,
+      "test_auc_raw": 0.5179573512906847,
+      "test_auc": 0.5179573512906847
+    }
+  }
+}

@@ -1,0 +1,623 @@
+# =============================================================================
+# LENGAN DUA TAHAP PENUH - KolektorSDD2 (cacat permukaan logam), BUKAN ayam
+# =============================================================================
+#
+# KENAPA ADA BERKAS INI
+# ---------------------
+# Ini satu-satunya lengan di repo yang menjalankan pipeline LENGKAP seperti
+# yang dimaksud skripsi: detektor dilatih dari nol, kotaknya dipakai memotong
+# crop, dan classifier kontrastif menilai crop hasil detektor itu. Lengan ayam
+# tidak bisa begitu (crop matinya dari anotasi manusia, bukan dari detektor),
+# dan SDNET2018 tidak punya objek untuk dideteksi sama sekali
+# (config_sdnet.yaml:52-56). Jadi pertanyaan "apakah rantai dua tahapnya
+# sendiri yang bermasalah" hanya bisa dijawab di sini.
+#
+# TEMUAN YANG SUDAH TERUKUR SEBELUM BERKAS INI, DAN WAJIB IKUT DILAPORKAN
+# -----------------------------------------------------------------------
+# Lantai jalan pintas (AUC berarah max(auc, 1-auc), tanpa model apa pun).
+# ANGKA DI BAWAH SUDAH DIKOREKSI - versi sebelumnya SALAH, dan sebabnya
+# diketahui persis. Ini tiga angka, bukan dua, dan yang ketiga itu temuannya:
+#
+#     level                                    AUC maks   ciri
+#     gambar utuh (satu tahap)                   0.612    bersih
+#     crop MENTAH (ukuran asli, tanpa letterbox) 0.9825   std_terang
+#     crop SEPERTI YANG DILIHAT MODEL (lb 224)   0.7300   saturasi
+#
+# Baris ketiga yang mengikat lengan ini: itu satu-satunya yang mengukur piksel
+# yang benar-benar masuk ke classifier.
+#
+# KOREKSI, DAN CARA MEMBUKTIKANNYA. Angka 0.9815/0.9834 yang sempat ditulis di
+# berkas ini dihitung oleh probe ad-hoc pada crop MENTAH - ukuran aslinya,
+# tanpa to_square(). Pipeline nyata menyimpan crop lewat
+# to_square(c, 224, letterbox) (build_crops_kolektor.py), dan pada crop itulah
+# lantainya diukur. Kotak yang SAMA, dua perlakuan, ciri yang sama:
+#
+#     ciri         mentah    letterbox 224
+#     std_terang   0.9825    0.6214          <- runtuh 36 poin
+#     saturasi     0.9029    0.7300
+#     (test split, 119 cacat vs 1013 normal)
+#
+# Sebabnya mekanis: std_terang crop cacat tinggi karena kotaknya KECIL dan
+# seluruh isinya menyimpang; membesarkannya ke 224 dengan interpolasi
+# melicinkan variasi lokal itu, dan bantalan abu 114 yang seragam menambah
+# piksel ber-varians nol. Jadi ciri yang paling kuat di crop mentah justru
+# yang paling dirusak resize. Diverifikasi ulang lewat jalur resmi:
+# src/eval_shortcut_baseline.py --crops data/crops_kolektor_gt ->
+# saturasi test 0.7300, std_terang test 0.6659.
+#
+# PELAJARAN YANG BISA DIPAKAI ULANG, dan sebabnya ditulis panjang di sini:
+# lantai jalan pintas WAJIB diukur pada crop yang TERSIMPAN, bukan pada kotak
+# sebelum pra-proses. Mengukurnya sebelum to_square() melaporkan lantai yang
+# 36 poin terlalu tinggi - dan lantai yang terlalu tinggi menyembunyikan
+# classifier yang sebetulnya tidak belajar apa pun, karena angka berapa pun di
+# bawah lantai dianggap "wajar".
+#
+# YANG TETAP BENAR setelah koreksi: memotong ke kotak cacat ITU SENDIRI adalah
+# seleksi varians lokal, dan lantainya (0.7300) tetap JAUH di atas versi satu
+# tahap (0.612). Jadi kesimpulan strukturalnya tidak berubah -
+#
+#   > Pipeline dua tahap TIDAK mewarisi lantai bersih versi satu tahapnya.
+#
+# - hanya besarnya yang berubah: selisihnya 0.12, bukan 0.37.
+#
+# Penambangan negatif-keras 0.9815 -> 0.9256 juga diukur pada crop mentah,
+# jadi angka itu TIDAK berlaku untuk crop letterbox dan tidak boleh dikutip
+# sampai diukur ulang lewat --tambang-keras std + eval_shortcut_baseline.
+#
+# LANTAI VARIAN DETEKSI - ANGKA SENDIRI, JANGAN PAKAI 0.7300 DI SINI
+# ------------------------------------------------------------------
+# Semua angka di atas adalah varian --sumber gt, yang MENIRU sebaran ukuran
+# kotak cacat saat menambang normal. Varian --sumber deteksi tidak meniru apa
+# pun: kotak negatifnya apa pun yang detektor keluarkan di gambar normal. Itu
+# bukan detail - itu menggeser lantainya 22 poin:
+#
+#   ciri (test AUC-terarah)    gt (lb224)   deteksi (lb224)
+#   saturasi                     0.7300         0.9150
+#   ukuran_bbox*                    -           0.9576
+#   rasio_bbox                      -           0.9046
+#   hue                             -           0.9011
+#   ketajaman                    ~0.68          0.6841
+#   (deteksi: n test 1019, 250 cacat vs 769 normal)
+#
+# Bentuk kotaknya yang membocorkan, dan itu TERCETAK saat crop dibangun:
+#   cacat : w 11-147 med 58 | h 10-138 med 57 | rasio med 1.60  (nyaris persegi)
+#   normal: w  8-141 med 13 | h  8-140 med 63 | rasio med 4.81  (serpih pipih)
+#
+# SEBABNYA DIUJI, BUKAN DISIMPULKAN DARI rho. Ciri yang dicurigai dirusak lalu
+# lantainya diukur ULANG lewat eval_shortcut_baseline.py resmi - tiga cara
+# memadankan ukuran, karena dua yang pertama gagal dan cara gagalnya informatif:
+#
+#   padanan            n test  saturasi  rasio  ukuran*  hue   ketajaman
+#   (tanpa padanan)      1019    0.9150  0.9046  0.9576  0.9011   0.6841
+#   sisi PENDEK saja      198    0.7320  0.6572  0.5180  0.7044   0.9366
+#   sisi PANJANG saja     462    0.9419  0.9363  0.9307  0.9383   0.7627
+#   w DAN h sekaligus     202    0.6843  0.6164  0.6669  0.6538   0.8708
+#
+# Bacaan tiap baris, termasuk yang meruntuhkan ramalan saya sendiri:
+#  - Padanan sisi pendek meruntuhkan ukuran_bbox ke 0.5180 tapi MENAIKKAN
+#    ketajaman 0.6841 -> 0.9366. Bukan kebetulan: to_square() menskala dengan
+#    sisi PANJANG (common.py:84), jadi pada sisi pendek yang sama kotak normal
+#    yang pipih punya sisi panjang jauh lebih besar -> dibesarkan lebih sedikit
+#    -> tetap tajam. Memadankan satu dimensi memindahkan kebocoran, tidak
+#    menghapusnya.
+#  - Ramalan berikutnya - "padankan sisi panjang, ketajaman ikut runtuh" -
+#    SALAH. Ketajaman memang turun ke 0.7627, tapi saturasi/rasio/ukuran tetap
+#    0.93-0.94, karena sisi pendeknya masih 42 vs 14. Satu dimensi tidak cukup
+#    ke arah mana pun.
+#  - Padanan w DAN h sekaligus (bak 8px di kedua sisi) yang menentukan: semua
+#    ciri geometris runtuh - ukuran 0.9576 -> 0.6669, rasio 0.9046 -> 0.6164,
+#    saturasi 0.9150 -> 0.6843 - pada ukuran yang benar-benar setara (test:
+#    cacat w37 h32 vs normal w30 h28).
+#
+# DUA LANTAI TERPISAH, dan pemisahan itu kesimpulannya:
+#  (1) lantai GEOMETRIS ~0.92-0.96 = artefak penambangan negatif yang tidak
+#      dikendalikan. Bisa dihapus dengan memadankan w dan h; bukan sifat data.
+#  (2) lantai KETAJAMAN 0.8708 = TETAP setelah ukuran setara (tajam med 99
+#      cacat vs 139 normal pada sisi 27 vs 23 px). Ini BUKAN artefak ukuran,
+#      dan sampai ada yang meruntuhkannya, inilah palang sebenarnya untuk
+#      lengan dua tahap.
+#
+# KEPUTUSAN (milik pengguna): lengan ini JALAN, lantainya dilaporkan sebagai
+# temuan. Konsekuensi yang mengikat pembacaan skornya: skor classifier di
+# varian deteksi TIDAK boleh dibandingkan dengan skor varian gt seolah satu
+# populasi, dan tidak boleh dibaca sebagai kemampuan mengenali cacat kecuali
+# melewati 0.9576 - atau, kalau yang dilaporkan adalah lengan padanan, 0.8708.
+# Manifest padanan TIDAK dijadikan lengan resmi: ia memangkas 250 -> 101 crop
+# cacat test dan menggeser mediannya (44 -> 27 px), jadi ia alat diagnosis
+# sebab, bukan dataset latih pengganti.
+#
+# REPRODUKSI:
+#   src/eval_shortcut_baseline.py --crops data/crops_kolektor_deteksi
+#   (padanan: _probe_ukuran.py {pendek|panjang|keduanya} lalu skrip yang sama)
+#
+# ATURAN YANG MENGIKAT BERKAS INI
+# -------------------------------
+# Blok `classifier` + `augmentation` disalin BYTE-IDENTIK dari
+# configs/config_hen_campur.yaml (yang menyalinnya dari config.yaml). Jangan
+# disetel ulang untuk mengejar angka: begitu arsitektur atau augmentasinya
+# berubah, ini bukan lagi pipeline yang sama dan perbandingan lintas lengan
+# kehilangan seluruh maknanya.
+#
+# Terverifikasi, dan CARA memverifikasinya ikut ditulis supaya angkanya bisa
+# dihitung ulang orang lain - hash tanpa perintahnya cuma angka yang harus
+# dipercaya:
+#
+#     f=configs/config_kolektor.yaml
+#     a=$(grep -n '^classifier:' $f | cut -d: -f1)
+#     b=$(grep -n '^# --- Output' $f | cut -d: -f1)
+#     sed -n "${a},$((b-1))p" $f | sha256sum
+#
+#     blok classifier+augmentation   ebb6b5af2076f3f1   <- IDENTIK
+#
+# Angka itu sama untuk KELIMA berkas: config_kolektor dan keempat config HEN
+# (campur 162..299, campur_eq 163..300, semua 161..298, semua_eq 162..299,
+# kolektor 417..554 - bergeser TIGA kali: saat tabel sweep imgsz masuk
+# (240..377), saat koreksi lantai di kepala berkas ditulis (278..415), lalu
+# saat lantai varian deteksi + tabel padanannya ditulis. Justru itu sebabnya
+# rentangnya TIDAK dipakai sebagai kunci: perintah di atas mencari batasnya
+# sendiri lewat grep, jadi tiga pergeseran ini tidak pernah membuatnya salah
+# hitung) - 138 baris, diff kosong.
+#
+# Blok `methods` SENGAJA TIDAK byte-identik, dan itu satu-satunya penyimpangan
+# yang diizinkan: kata benda "hidup & mati" ditukar jadi "normal & cacat"
+# supaya keluaran log tidak menyesatkan. Kunci dan logikanya sama persis;
+# presedennya config_sdnet.yaml:251-253 yang menukarnya jadi "utuh/retak".
+# Jadi hash blok methods di sini SENGAJA beda, dan selisihnya bisa diperiksa:
+#     HEN      c83d5c5e1c3b1a5f
+#     kolektor 9648fba58382c2e1
+# `diff` antara keduanya tepat SATU baris - baris supcon, hanya kata bendanya.
+# Kalau suatu saat diff-nya lebih dari satu baris, ada yang menyetel ulang
+# blok yang seharusnya beku.
+#
+# ADA blok `detection:` - beda dari config_sdnet.yaml yang menghilangkannya,
+# karena di sini detektornya justru inti lengannya.
+#
+# TIDAK ADA blok `protocol:` - disengaja, mengikuti pola config_sdnet.yaml:41.
+# KolektorSDD2 mengirim test split resmi paper (110 cacat / 894 normal) yang
+# sah dipakai, jadi lengan ini memang butuh jalur train/val/test tiga arah
+# biasa. `development_only` dan validate_development_manifest adalah penjaga
+# khusus ayam (kontrak PIO+Roboflow, hash split lock, hitungan 237/155); tidak
+# satu pun perlu dilonggarkan demi dataset ini. Konsekuensinya
+# src/eval_intervensi.py BISA jalan di sini - ia hanya membaca split literal
+# "test" (eval_intervensi.py:94), yang di lengan HEN tidak ada.
+
+seed: 42
+device: auto
+
+# --- Tahap 1: Deteksi cacat ------------------------------------------------
+detection:
+  # Dilatih dari NOL di dataset ini oleh src/train_detect_kolektor.py
+  # (yolov8m COCO -> 100 epoch, AdamW, lr0 0.02, seed 42). Bobot ayam TIDAK
+  # dipakai sebagai titik awal: permukaan logam tergores dan ayam di kandang
+  # tidak berbagi apa pun yang berguna.
+  #
+  # PERINGATAN JALUR, dan sebabnya terukur. `--project` di ultralytics
+  # diselesaikan terhadap `runs_dir` di ~/AppData/Roaming/Ultralytics/
+  # settings.json, BUKAN terhadap direktori kerja. Di mesin ini runs_dir
+  # menunjuk repo generalisasi-ayam-skripsi, jadi `--project
+  # outputs/runs_detect_kolektor` mendarat di LUAR repo ini. Karena itu jalur
+  # di bawah absolut - bukan gaya jalur relatif config lain - dan
+  # train_detect_kolektor.py mencetak save_dir asli dari trainer, tidak
+  # menyusunnya ulang dari --project.
+  weights: "C:/Arib/MASSA AYAM/generalisasi-ayam-skripsi/runs/detect/outputs/runs_detect_kolektor/cacat_m/weights/best.pt"
+
+  # DIPIN DARI SWEEP, bukan ditebak - TAPI BACA DUA TABEL, bukan satu. Sweep
+  # pertama di bawah menggeser imgsz pada conf 0.25 TETAP, dan conf itu
+  # ternyata yang mengikat, bukan imgsz. Tabel kedua (conf 0.05) yang
+  # menentukan nilai yang dipin; yang pertama TETAP DITULIS karena pasangan
+  # keduanya itulah temuannya.
+  #
+  # --- TABEL 1: conf 0.25, iou 0.7, kotak acuan MIN_AREA=20 ---
+  #
+  #   imgsz          256    320    416    512    640    768    960   1280
+  #   recall latih  .2148  .2852  .3296  .3667  .3556  .3148  .2593  .1519
+  #   recall test   .2101  .2941  .3361  .3697  .3193  .3361  .2773  .1429
+  #   IoU rata2 tes .1721  .2260  .2624  .2992  .2779  .2756  .2190  .1253
+  #
+  # (latih n=245 gambar/270 objek, test n=110/119; reproduksi:
+  #  python src/eval_detect_masks.py --config configs/config_kolektor.yaml   #         --root data/kolektor2/{train,test} --sweep
+  #  JSON disimpan per split: outputs/predictions_kolektor/
+  #  detect_masks_eval_{train,test}.json - nama berkas bawaannya TETAP, jadi
+  #  sweep kedua menimpa yang pertama kalau tidak disalin dulu.)
+  #
+  # 512 menang di KEDUA split, jadi pilihannya tidak bergantung split mana yang
+  # dipakai memilih. 640 (nilai latih detektor) kalah - jadi imgsz inferensi
+  # memang TIDAK disalin dari training, persis pelajaran configs/config.yaml:
+  # 14-22 dan memori yolo-imgsz-skala-objek.
+  #
+  # TAPI KURVANYA BUKAN INTI MASALAHNYA, dan ini yang wajib ikut dilaporkan.
+  # Kurvanya mulus dan satu puncak (naik 256->512, turun 512->1280), BUKAN
+  # jurang seperti lengan ayam (100% -> 36% -> 0%). Artinya imgsz bukan
+  # penghambatnya: detektornyalah yang lemah. Pada 512, rincian per objek:
+  #
+  #   IoU == 0     (objek tak tersentuh sama sekali)  55.2% latih / 55.5% test
+  #   0 < IoU < .5 (tersenggol, tak terkurung)         8.1% /  7.6%
+  #   IoU >= .5                                       36.7% / 37.0%
+  #   median deteksi per gambar                        0    /  0
+  #
+  # Median deteksi NOL: lebih dari separuh gambar bercacat tidak menghasilkan
+  # satu kotak pun (53.5% latih / 54.5% test gambar bercacat nol tersentuh).
+  #
+  # Recall dipisah per LUAS kotak (test): luas <200 px -> 0.000 (n=1),
+  # 200-1k -> 0.0625 (n=16), 1k-5k -> 0.5714 (n=56), >=5k -> 0.2391 (n=46).
+  # Cacat kecil praktis tidak terdeteksi; itu yang menyeret rata-ratanya.
+  #
+  # KOREKSI ATAS DUGAAN AWAL SAYA SENDIRI: sempat saya catat bahwa angka latih
+  # 0.3667 "optimistis karena ~184 dari 245 gambarnya ikut melatih detektor".
+  # Ternyata TIDAK: test memberi 0.3697, praktis sama. Detektor ini tidak
+  # menghafal data latihnya - ia lemah SERAGAM di keduanya. Jadi 37% adalah
+  # angka jujur, bukan angka yang digelembungkan data terlihat.
+  #
+  # --- TABEL 2: conf 0.05, sisanya IDENTIK (iou 0.7, MIN_AREA=20) ---
+  #
+  #   imgsz          256    320    416    512    640    768    960   1280
+  #   recall latih    46%    53%    59%    65%    65%    66%    61%    50%
+  #   recall test     41%    53%    61%    63%    61%    61%    59%    47%
+  #   IoU rata2 tes  .338   .427   .474   .510   .499   .485   .460   .406
+  #
+  # KESIMPULAN B4 BERUBAH, dan bagian mana yang berubah disebut eksplisit.
+  # Yang SALAH dari bacaan pertama: "detektornya lemah, recall 37%". Recall
+  # sebenarnya 65-66% pada ambang yang dipakai lengan ini - 37% itu artefak
+  # conf 0.25, bukan sifat detektornya. Yang TETAP BENAR: kurvanya mulus dan
+  # satu puncak di kedua conf, jadi imgsz memang bukan penghambat utama; dan
+  # imgsz inferensi tetap TIDAK sama dengan nilai latih (640 kalah di kedua
+  # tabel).
+  #
+  # 768 DIPIN, dan aturannya dipatuhi walau hasilnya kurang nyaman: imgsz
+  # dipilih dari split LATIH, tidak pernah dari test (rencana, dan alasannya
+  # jelas - memilih dari test itu kebocoran). Latih memberi 768 (66%). Test
+  # justru memberi 512 (63% vs 61% di 768). Selisihnya kecil di kedua arah
+  # (latih 512 = 65%, hanya 1 poin di bawah 768), jadi 512 sebetulnya pilihan
+  # yang lebih stabil - TAPI memilihnya KARENA test yang bilang begitu adalah
+  # kebocoran yang persis dilarang protokol ini. Jadi dipakai 768, dan
+  # ketidaknyamanan itu dilaporkan, bukan disembunyikan dengan menukar
+  # aturannya setelah melihat hasilnya.
+  #
+  # Konsekuensi yang mengikat lengan ini (keputusan: JALAN, lantainya jadi
+  # temuan): varian --sumber deteksi memotong ~66% cacat pada setelan ini -
+  # jauh lebih baik dari 37%, tapi masih berarti ~1/3 cacat tak pernah sampai
+  # ke classifier, dan skornya tidak boleh dibaca tanpa menyebut itu. Varian
+  # --sumber gt tetap yang memegang angka acuannya.
+  #
+  # CATATAN REPRODUKSI: eval_detect_masks.py TIDAK punya --conf; ia membaca
+  # detection.conf dari config ini. Jadi tabel 1 hanya bisa direproduksi
+  # dengan mengembalikan conf ke 0.25 dulu. JSON kedua sweep disimpan
+  # terpisah supaya tidak saling menimpa:
+  #   detect_masks_eval_{train,test}.json                 (conf 0.25)
+  #   detect_masks_eval_conf005_{train,test}.json         (conf 0.05)
+  imgsz: 768
+
+  # 0.05, BUKAN 0.25 - dan ini KOREKSI atas gerbang B4, bukan penyetelan
+  # untuk mengejar angka. Sweep B4 yang pertama menggeser imgsz pada conf
+  # 0.25 TETAP, lalu menyimpulkan "detektornya lemah seragam, recall 37%".
+  # Kesimpulan itu SALAH SEBAGIAN, dan sebabnya terukur: pada conf 0.25
+  # detektor memberi NOL kotak di permukaan normal - 0 dari 2086 gambar
+  # normal train dan 0 dari 894 test. Akibatnya manifest lengan deteksi
+  # berisi SATU kelas (187 crop, semuanya cacat) dan tidak bisa melatih
+  # classifier apa pun.
+  #
+  # Detektornya ternyata TIDAK bisu, hanya di bawah ambang. Skor tertinggi
+  # yang pernah ia berikan di gambar normal: 0.1902 (train) / 0.2211 (test) -
+  # keduanya persis DI BAWAH 0.25. Terukur pada 400 gambar normal per split:
+  #
+  #     conf     gambar normal berdeteksi (train)   (test)
+  #     0.25                  0/400                 0/400
+  #     0.10                  8/400                 9/400
+  #     0.05                 39/400                40/400
+  #     0.01                256/400               261/400
+  #
+  # GODAAN YANG DITOLAK: menambang positif di 0.25 dan negatif di 0.05.
+  # Itu membuat conf jadi pemisah kelas yang sempurna, dan classifier bisa
+  # menang dengan membaca apa pun yang berkorelasi dengan conf - jalan pintas
+  # yang kita pasang sendiri. Jadi dipakai SATU ambang untuk kedua kelas, dan
+  # syarat sahnya diuji: sebaran conf kedua kelas harus BERTUMPANG.
+  #
+  #     conf 0.05   crop cacat        crop normal      AUC conf-sbg-pemisah
+  #     train       505 (med 0.1325)  132 (med 0.0670)        0.8107
+  #     test        252 (med 0.1288)  182 (med 0.0676)        0.7948
+  #     rentang cacat 0.0501-0.6963, normal 0.0503-0.2211 -> BERTUMPANG
+  #
+  # AUC 0.79-0.81, bukan 1.0: conf memberi informasi tapi BUKAN labelnya.
+  # Kalau angka itu pernah mendekati 1.0, lengan ini tidak sah dan harus
+  # dihentikan - bukan dilanjutkan dengan catatan kaki.
+  conf: 0.05
+  iou: 0.7              # NMS
+  max_det: 300
+
+# --- Tahap 2: Sumber data --------------------------------------------------
+crops:
+  # Hasil scripts/siapkan_kolektor.py: <root>/<split>/images/<stem>.png +
+  # <root>/<split>/segmentations/<stem>.png, mask HANYA untuk gambar yang
+  # benar-benar bercacat. Mask hitam total sengaja tidak ditulis: kalau
+  # ditulis, pair_files() memasangkannya, masks_to_boxes() memberi nol kotak,
+  # dan gambar normal masuk populasi evaluasi recall sebagai gambar tanpa
+  # objek - menggeser recall tanpa ada yang gagal.
+  kolektor_root: "data/kolektor2"
+
+  out_dir: "data/crops_kolektor_gt"
+  manifest: "data/crops_kolektor_gt/manifest.csv"
+
+  # ---------------------------------------------------------------------
+  # DUA AMBANG AREA YANG MUDAH TERTUKAR - JANGAN DISATUKAN
+  #
+  #   eval_detect_masks.MIN_AREA = 20   kotak ACUAN (latih detektor + evaluasi)
+  #   crops.min_area_komponen    = 50   crop CLASSIFIER (kunci di bawah)
+  #
+  # Keduanya sengaja beda dan dicetak tiap jalan. Jangan bandingkan recall
+  # deteksi dengan jumlah crop di sini seolah dari populasi yang sama.
+  #
+  # Satu gambar tidak cocok dengan paper karena ambang yang pertama, dan
+  # sebabnya diketahui: paper mencatat train 246 cacat / 2085 normal, staging
+  # memberi 245/2086. Selisihnya seluruhnya train/10045, yang mask-nya 23
+  # piksel putih dengan contourArea 14.5 - di bawah MIN_AREA=20. Ambang itu
+  # TIDAK diturunkan hanya supaya angkanya cocok: kalau diturunkan, definisi
+  # kotak acuan latih berhenti identik dengan definisi kotak acuan evaluasi,
+  # dan itu harga yang jauh lebih mahal daripada satu gambar.
+  # ---------------------------------------------------------------------
+  min_area_komponen: 50
+  min_box_size: 8
+
+  # Split paper DIPERTAHANKAN UTUH: test (110/894) -> split "test", tidak
+  # disentuh; train dibagi train+val di level GAMBAR dengan rasio di bawah.
+  #
+  # Kenapa per gambar, dan kenapa itu DIPERIKSA bukan diasumsikan: pelajaran
+  # HEN v2 berlaku umum - di sana 3929 berkas hanya 1034 foto, dan 465
+  # pasangan kembar bahkan ber-stem BEDA, jadi id unik tidak membuktikan foto
+  # unik. scripts/siapkan_kolektor.py menjalankan union-find korelasi 32x32
+  # yang sama atas 2331 gambar train; hasilnya 2331 kelompok dengan korelasi
+  # maks antar-gambar 0.9189 (di bawah ambang 0.97). Di dataset INI gambar =
+  # kelompok, jadi split per gambar memang cukup.
+  rasio_val: 0.25
+
+  # Satu gambar menyumbang crop cacat DAN crop normal, sehingga
+  # build_crops.balance_and_split melempar ValueError("satu base_image punya
+  # dua label") (build_crops.py:465) - sebab yang sama melahirkan
+  # src/build_manifest_sdnet.py. Karena itu src/build_crops_kolektor.py punya
+  # bagi_per_gambar() sendiri.
+  #
+  # 1.0 = satu crop normal per crop cacat. Ukuran crop normal DITIRU dari
+  # sebaran kotak cacat: kalau sebarannya beda, ukuran sendiri jadi jalan
+  # pintas dan classifier bisa menang tanpa melihat permukaannya.
+  normal_per_cacat: 1.0
+
+  # tidak | std. 'std' memilih, dari 8 calon, crop normal dengan std_terang
+  # TERTINGGI. PERHATIAN: dasar pemilihan itu sudah tidak sekuat dugaan awal -
+  # pada crop letterbox 224 (yang dilihat model) std_terang hanya 0.6659,
+  # sedangkan yang mengikat adalah saturasi 0.7300. Jadi 'std' menambang
+  # negatif keras menurut ciri yang BUKAN lantai lagi. Angka 0.9815 -> 0.9256
+  # diukur pada crop mentah dan TIDAK berlaku di sini. Bawaannya 'tidak';
+  # kalau varian 'std' dijalankan, lantainya wajib diukur ulang, bukan
+  # dikutip.
+  tambang_keras: tidak
+
+  bbox_padding: 0.15
+  size: 224
+  square_mode: letterbox
+
+  # BANTALAN LETTERBOX TIDAK TERLINDUNGI DI SINI. common.letterbox() memasang
+  # bantalan abu 114 yang lebarnya berkorelasi dengan bentuk kotak.
+  # Perlindungan struktural SDNET (ubin sudah persegi 256x256 -> nol bantalan,
+  # config_sdnet.yaml:36-39) HILANG: kotak cacat w 1-231, h 2-423. Untuk
+  # varian gt ukuran crop normal sengaja ditiru sehingga ciri `rasio` terukur
+  # 0.5083/0.4832 (praktis nol informasi); untuk varian deteksi sebaran itu
+  # TIDAK dikendalikan, jadi `rasio` WAJIB diukur ulang lewat
+  # eval_shortcut_baseline.py dan tidak boleh dikutip dari varian gt.
+
+  # Semua gambar Kolektor dari kamera dan jarak yang sama, jadi jalan pintas
+  # ketajaman/resolusi yang menyerang data ayam (bacc 0.9231) tidak berlaku
+  # di sini - terukur pada crop letterbox ketajaman hanya 0.6123 test.
+  # Lantainya saturasi 0.7300, yaitu ciri WARNA, yang equalization resolusi
+  # tidak menyentuh - jadi menyalakannya tidak akan menurunkan apa pun yang
+  # jadi masalah. (Angka ketajaman 0.8725 yang sempat ditulis di sini dari
+  # crop mentah; lihat koreksi di kepala berkas.)
+  equalize_resolution:
+    enabled: false
+    target_short_side: 96
+
+classifier:
+  image_size: 224           # BATAS INPUT: 224x224 (ketentuan)
+  resize_mode: letterbox    # letterbox (jaga rasio aspek) | resize (paksa)
+
+  backbone: resnet18
+  pretrained: true
+  feature_dim: 512          # dimensi output resnet18
+  proj_dim: 128             # dimensi embedding kontrastif
+  proj_hidden: 512
+
+  batch_size: 32
+  num_workers: 0            # 0 = paling aman di Windows
+  temperature: 0.07
+
+  # Tahap kontrastif (metode A & B)
+  epochs_contrastive: 60
+  lr_contrastive: 0.0005
+
+  # Linear probe (encoder dibekukan, hanya kepala klasifikasi dilatih)
+  epochs_probe: 40
+  lr_probe: 0.001
+
+  # Klasifikasi biasa (metode C)
+  epochs_ce: 60
+  lr_ce: 0.0001
+
+  weight_decay: 0.0001
+  class_weighting: true     # tangani ketimpangan hidup vs mati
+
+  # Bobot cross-entropy yang digabung ke SupCon (metode B).
+  # 0.0 = SupCon murni; > 0 = SupCon + CE dilatih bersamaan.
+  supcon_ce_weight: 0.0
+
+  early_stop_patience: 15
+
+
+# --- Augmentasi per metode -------------------------------------------------
+# Tiap metode memakai kebijakan augmentasi dari SATU paper yang berbeda.
+#
+# PERINGATAN ILMIAH: karena augmentasinya berbeda-beda, membandingkan ketiga
+# metode pada DIAGONAL (selfcon+simclr vs supcon+stacked_randaug vs
+# ce+hier_addone) TIDAK lagi mengisolasi fungsi loss - yang berubah dua hal
+# sekaligus. Jalankan `python src/train.py --grid full` sekali sebagai
+# kontrol: kolomnya (augmentasi ditahan, loss divariasikan) memulihkan
+# perbandingan metode yang sah. Lihat outputs/reports/augmentation_report.md.
+#
+# TIDAK ADA ROTASI di kebijakan mana pun, walaupun ketiga paper memakainya.
+# Orientasi (tergeletak vs berdiri tegak) adalah sinyal nyata yang
+# membedakan mati dan hidup di dataset ini; memutar gambar menghapusnya.
+augmentation:
+  by_method:
+    selfcon: {contrastive: simclr,          head: minimal}
+    supcon:  {contrastive: stacked_randaug, head: minimal}
+    ce:      {contrastive: null,            head: hier_addone}
+
+  # Kunci tahap linear probe ke 'minimal' untuk selfcon/supcon.
+  # Alasan: probe mengukur kualitas ENCODER. Kalau augmentasi probe ikut
+  # berbeda per metode, angkanya mencampur dua efek sekaligus. Khosla dkk.
+  # mengukur ini: silang pretrain-aug x probe-aug menggeser top-1 > 3 poin.
+  # Metode 'ce' terpaksa berbeda - tahap kepala adalah satu-satunya tahap
+  # latihnya; asimetri ini ditulis terang-terangan di laporan.
+  lock_probe_policy: true
+
+  # Pengaturan gambar contoh di src/aug_report.py
+  preview_views: 6
+  preview_samples: 4          # 2 hidup + 2 mati
+
+  policies:
+    none:
+      ops: []
+
+    # == perilaku lama augment(strong=False): flip saja ==
+    minimal:
+      ops:
+        - {op: hflip, p: 0.5}
+
+    # == perilaku lama augment(strong=True), disimpan sebagai pembanding ==
+    # Blur k=3/5 di sini TERLALU LEMAH: AUC ketajaman masih 0.851.
+    legacy:
+      ops:
+        - {op: hflip,           p: 0.5}
+        - {op: rrc_iso,         p: 0.7, scale: [0.70, 1.00]}
+        - {op: bright_contrast, p: 0.8, alpha: [0.7, 1.3], beta: [-30, 30]}
+        - {op: hsv,             p: 0.5, sat: [0.6, 1.4], hue: [-8, 8]}
+        - {op: gray,            p: 0.2}
+        - {op: blur,            p: 0.3, kernel: [3, 5]}
+
+    # ---- A. SimCLR - Chen dkk., ICML 2020, Appendix A ------------------
+    # Urutan paper: crop -> flip -> distorsi warna -> grayscale -> blur.
+    # Gambar 5 paper: crop + distorsi warna adalah pasangan TERKUAT
+    # (+23.2 poin di atas crop saja), karena warna/tekstur mentah harus
+    # dimatikan supaya encoder tidak menghafal histogram warna.
+    # Blur kernel = 10% sisi gambar = 23 px pada 224 - jauh lebih kuat
+    # daripada k=3/5 versi lama, dan itulah yang langsung menyerang
+    # jalan pintas ketajaman (lihat laporan).
+    simclr:
+      ops:
+        - {op: rrc,          p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333]}
+        - {op: hflip,        p: 0.5}
+        - {op: color_jitter, p: 0.8, strength: 1.0}
+        - {op: gray,         p: 0.2}
+        - {op: blur,         p: 0.5, kernel_frac: 0.10, sigma: [0.1, 2.0]}
+
+    # ---- B. Stacked RandAugment - Khosla dkk., NeurIPS 2020 -------------
+    # Paper SupCon TIDAK mendefinisikan augmentasinya sendiri; ia
+    # membandingkan AutoAugment / RandAugment / SimAugment / Stacked
+    # RandAugment, dan yang terakhir terbaik untuk ResNet dalam.
+    # "Stacked" = rangkaian 2 op dijalankan DUA KALI berurutan.
+    # SENGAJA TANPA Gaussian blur (blur bukan bagian RandAugment), supaya
+    # kontras blur-vs-tanpa-blur terlihat jelas di tabel kebocoran.
+    # Rotate/ShearX/ShearY dibuang dari kolam op -> lihat catatan di atas.
+    stacked_randaug:
+      ops:
+        - {op: rrc,     p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333]}
+        - {op: hflip,   p: 0.5}
+        - {op: randaug, p: 1.0, n: 2, magnitude: 9, stacked: true}
+
+    # ---- C. Zhang & Ma, CVPR 2022 - modul augmentasi "add-one" ----------
+    # t0 = crop (selalu), lalu t1..t4 = warna, grayscale, blur, flip PERSIS
+    # urutan paper (urutan ini yang menang: 67.1 vs 64.5 untuk urutan
+    # terburuk). level_sampling meniru "expanded views": tiap sampel
+    # memakai subset T_i dengan i ~ U{1..4}, jadi sebagian pasangan cuma
+    # beda crop+warna (invariansi lemah) dan sebagian beda penuh.
+    #
+    # TIDAK diimplementasikan: loss multi-stage 4-tap, 8 view, dan
+    # augmentation-parameter embedding. Ketiganya mengubah ARSITEKTUR,
+    # sedangkan syarat perbandingan ini adalah arsitektur identik.
+    # Laporan wajib menyebut batasan ini - menyebutnya "metode Zhang"
+    # tanpa catatan itu klaim yang tidak benar.
+    hier_addone:
+      level_sampling: true
+      ops:
+        - {op: rrc,          p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333], level: 0}
+        - {op: color_jitter, p: 0.8, strength: 1.0, level: 1}
+        - {op: gray,         p: 0.2, level: 2}
+        - {op: blur,         p: 0.5, kernel_frac: 0.10, sigma: [0.1, 2.0], level: 3}
+        - {op: hflip,        p: 0.5, level: 4}
+
+# --- Output ----------------------------------------------------------------
+# predictions_dir WAJIB dipisah, dan ini bukan kerapian. src/detect.py:46 dan
+# src/eval_detect_masks.py:183 menulis detections.json, detect_vis/,
+# detect_crops/ dan detect_masks_eval.json RATA ke predictions_dir dengan nama
+# tetap. Kalau diarahkan ke outputs/predictions, artefak deteksi ayam yang
+# sudah ter-commit akan tertimpa oleh hasil Kolektor - dan karena namanya
+# sama, tidak ada yang gagal dan tidak ada yang kelihatan.
+#
+# reports_dir juga dipisah karena train.py memaku nama comparison.csv/md/png.
+# Preseden kesalahannya ada: outputs/reports/domain_mati_kedua.md bagian 4h.
+output:
+  runs_dir: "outputs/runs_kolektor"
+  reports_dir: "outputs/reports_kolektor"
+  predictions_dir: "outputs/predictions_kolektor"
+
+# --- Laporan ---------------------------------------------------------------
+report:
+  istilah:
+    judul: "Cacat vs Normal (KolektorSDD2 - lengan dua tahap penuh)"
+    positif: "crop CACAT"
+    pos: "cacat"
+    neg: "normal"
+    pos_panjang: "crop cacat"
+    neg_panjang: "crop normal"
+    # Sebab lantainya diketahui dan spesifik ke tahap pemotongan, jadi
+    # ditulis - bukan dikosongkan seperti di SDNET. Kalimat bawaan report.py
+    # ("crop ayam hidup median 83 px...") salah total untuk dataset ini.
+    sebab_lantai: >-
+      Penyebabnya tahap pemotongan itu sendiri: kotak cacat dipilih justru
+      karena isinya menyimpang dari sekitarnya, sehingga saturasi dan varians
+      crop cacat sudah berbeda sebelum model melihatnya. Pada gambar UTUH
+      dataset yang sama lantainya hanya 0.612. Catatan penting: diukur pada
+      crop MENTAH lantainya tampak 0.9825 (std_terang); pada crop letterbox
+      224 yang benar-benar dilihat model ia turun ke 0.7300 (saturasi). Yang
+      berlaku adalah angka kedua.
+    # Diperiksa SETELAH jalan, tidak diasumsikan. Di SDNET val tidak jenuh
+    # (0.87-0.89); pada data ayam jenuh di 1.0000 sejak epoch 1-2. Kolektor
+    # punya test split paper yang sah, jadi val di sini memang cuma untuk
+    # memilih checkpoint dan ambang.
+    val_jenuh: false
+
+  # Ciri kandidat untuk LANTAI laporan. WAJIB ada: tanpa daftar ini report.py
+  # memakai ketajaman saja dengan arah dipaku +1, dan pada crop letterbox
+  # ketajaman (0.6163 train / 0.6123 test) BUKAN yang mengikat - saturasi
+  # 0.6831 train / 0.7300 test di atasnya. Memakai bawaan berarti melaporkan
+  # lantai 0.61 padahal lantainya 0.73, dan itu salah lapor pada satu-satunya
+  # angka yang menentukan apakah skor classifier berarti.
+  # Ciri dipilih dari skor TRAIN, tidak pernah test.
+  # Semua angka di atas dari outputs/predictions_kolektor/
+  # shortcut_kolektor_gt.json. KLAIM LAMA DI SINI SUDAH SALAH dan diganti:
+  # dulu tertulis "varian deteksi TIDAK punya angka pembanding karena
+  # manifestnya satu kelas". Itu benar hanya pada conf 0.25; pada conf 0.05
+  # varian deteksi punya dua kelas (826 cacat / 2355 normal) dan lantainya
+  # sudah terukur - saturasi 0.9150, ukuran_bbox 0.9576. Angkanya ada di
+  # shortcut_kolektor_deteksi.json dan dibaca oleh
+  # configs/config_kolektor_deteksi.yaml, BUKAN oleh berkas ini.
+  lantai_ciri: [ketajaman, saturasi, terang, hue, std_terang]
+
+# Tiga metode yang dibandingkan - identik dengan eksperimen ayam.
+# Kata "hidup/mati" pada deskripsi supcon di config master diganti jadi
+# "normal/cacat" supaya keluaran log tidak menyesatkan; logikanya sama persis.
+# Penyimpangan ini SATU-SATUNYA yang diizinkan di blok byte-identik, dan
+# presedennya config_sdnet.yaml:251-253 ("utuh/retak"). Karena itu hash blok
+# methods di berkas ini SENGAJA beda dari c83d5c5e1c3b1a5f milik config HEN -
+# yang wajib identik adalah kunci dan logikanya, bukan kata bendanya.
+methods:
+  selfcon: "Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe"
+  supcon:  "Supervised Contrastive - label normal & cacat digabung dalam loss"
+  ce:      "Klasifikasi biasa (Cross-Entropy) - baseline"
