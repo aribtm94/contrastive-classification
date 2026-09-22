@@ -428,6 +428,37 @@ def figur_6(out: Path):
     simpan(fig, out, "06_roc_sdnet.png")
 
 
+def _lengan_dari_entri(e: dict) -> str:
+    """Nama lengan (asli / eq48) dibaca dari CONFIG, bukan dari nama berkas.
+
+    Heuristik lama `"_eq_" in nama_registry` kebetulan benar untuk dev2 (sudah
+    diperiksa: 18/18 entri sepakat dengan config), tapi bentuknya persis
+    kegagalan senyap yang sudah tercatat - begitu ada lengan baru yang tidak
+    memakai pola nama itu, ia jatuh ke "asli" tanpa error dan dua lengan
+    tercampur dalam satu rerata. Sumber kebenarannya crops.equalize_resolution.
+    """
+    eq = ((e.get("config_snapshot", {}).get("crops", {})
+           .get("equalize_resolution") or {}).get("enabled"))
+    if eq is None:
+        raise KeyError(
+            "entri benchmark tanpa config_snapshot.crops.equalize_resolution."
+            "enabled - lengan tidak bisa ditentukan tanpa menebak nama berkas")
+    return "eq48" if eq else "asli"
+
+
+def _peta_lengan_registry(d: dict) -> dict:
+    """registry -> lengan, dirakit dari config tiap entri (blok nuisance hanya
+    berkunci nama berkas registry, jadi petanya diambil dari interventions)."""
+    peta = {}
+    for entri in d["interventions"].values():
+        for e in entri:
+            nama = Path(e["registry"]).name
+            lengan = _lengan_dari_entri(e)
+            if peta.setdefault(nama, lengan) != lengan:
+                raise ValueError(f"registry {nama} mengaku dua lengan")
+    return peta
+
+
 # ===========================================================================
 # Figur 7 - intervensi: SDNET turun, ayam justru naik
 # ===========================================================================
@@ -439,8 +470,7 @@ def figur_7(out: Path):
     g = collections.defaultdict(list)
     for k, rows in ay.items():
         for r in rows:
-            reg = Path(r["registry"]).name
-            keluarga = "eq48" if "_eq_" in reg else "asli"
+            keluarga = _lengan_dari_entri(r)
             g[(keluarga, r["method"], k)].append(r["absolute"]["pooled_auc"])
     rerata = {k: float(np.mean(v)) for k, v in g.items()}
 
@@ -579,15 +609,15 @@ def figur_9(out: Path):
     d = muat_json("outputs/predictions/fixed_chick_dev2.json")
     g = collections.defaultdict(list)
     for r in d["interventions"]["asli"]:
-        reg = Path(r["registry"]).name
-        kel = "eq48" if "_eq_" in reg else "asli"
+        kel = _lengan_dari_entri(r)
         g[(kel, r["method"])].append(r["absolute"]["pooled_auc"])
 
     bar = []
     for (kel, met), v in g.items():
         bar.append((f"{kel} / {met}", float(np.mean(v)), float(np.std(v)), BIRU))
+    peta = _peta_lengan_registry(d)
     nu = d["nuisance"]["asli"][
-        next(k for k in d["nuisance"]["asli"] if "_eq_" not in k)]
+        next(k for k in d["nuisance"]["asli"] if peta[k] == "asli")]
     for k, v in nu.items():
         skor = v["pooled_auc"]
         bar.append((NAMA_NUISANCE.get(k, k), max(skor, 1 - skor), 0.0, JINGGA))
@@ -626,8 +656,442 @@ def figur_9(out: Path):
     simpan(fig, out, "09_papan_skor_dev2.png")
 
 
+
+
+# ===========================================================================
+# Figur 10-14 - kurva latih/validasi per augmentasi, galeri augmentasi,
+#               dan evaluasi akhir kedua percobaan
+# ===========================================================================
+# Satu augmentasi terikat ke satu metode (rancangan 2 faktor yang sengaja
+# dibiarkan terikat, lihat bagian 5.2), jadi "per augmentasi" dan "per metode"
+# menamai panel yang sama. Judul panel menyebut KEDUANYA supaya tidak ada yang
+# menyangka augmentasinya bisa ditukar antar metode.
+AUG_METODE = [("simclr", "selfcon", "selfcon__simclr", JINGGA),
+              ("stacked_randaug", "supcon", "supcon__stacked_randaug", AQUA),
+              ("hier_addone", "ce", "ce__hier_addone", BIRU)]
+
+def _baca_history(run_dir: Path) -> list[dict]:
+    """history.csv -> list dict; sel kosong jadi None, bukan 0.0.
+
+    Sel kosong berarti "tidak diukur pada epoch ini" (mis. val_bacc selama
+    tahap contrastive). Memaksanya jadi 0.0 akan menggambar garis yang turun
+    ke nol - kejadian yang tidak pernah ada.
+    """
+    f = run_dir / "history.csv"
+    if not f.exists():
+        return []
+    out = []
+    with f.open(encoding="utf-8", newline="") as fh:
+        for r in csv.DictReader(fh):
+            d = {"stage": r["stage"]}
+            for k, v in r.items():
+                if k == "stage":
+                    continue
+                d[k] = float(v) if v not in ("", None) else None
+            out.append(d)
+    return out
+
+def _tahapan(hist: list[dict]) -> list[tuple[str, list[dict]]]:
+    """Pecah history per tahap berurutan, tanpa mengubah urutan epoch."""
+    blok, kini = [], None
+    for row in hist:
+        if kini is None or row["stage"] != kini[0]:
+            kini = (row["stage"], [])
+            blok.append(kini)
+        kini[1].append(row)
+    return blok
+
+def _kurva_loss(ax, runs: Path, run_nama: str, warna: str, judul: str):
+    """Loss per epoch untuk 3 seed; batas tahap ditandai garis vertikal."""
+    rapikan(ax)
+    batas, label_tahap = [], []
+    for i, sd in enumerate(SEEDS):
+        hist = _baca_history(runs / f"{run_nama}__{sd}")
+        if not hist:
+            continue
+        x0 = 0
+        for j, (nama_tahap, rows) in enumerate(_tahapan(hist)):
+            xs = list(range(x0 + 1, x0 + 1 + len(rows)))
+            ax.plot(xs, [r.get("train_loss") for r in rows],
+                    color=warna, linewidth=1.0, alpha=0.75, zorder=3)
+            # val loss putus-putus: dua besaran di satu sumbu hanya boleh
+            # kalau bisa dibedakan tanpa melihat legenda.
+            ax.plot(xs, [r.get("val_loss") for r in rows],
+                    color=INK2, linewidth=0.9, alpha=0.5,
+                    linestyle=(0, (3, 2)), zorder=2)
+            x0 += len(rows)
+            if i == 0:
+                if j > 0:
+                    batas.append(xs[0] - 0.5)
+                label_tahap.append((nama_tahap, xs[0], xs[-1]))
+    for b in batas:
+        ax.axvline(b, color=BASE, linewidth=1.0, linestyle=":", zorder=1)
+    for nama_tahap, a, b in label_tahap:
+        ax.annotate(nama_tahap, xy=((a + b) / 2, 1.0),
+                    xycoords=("data", "axes fraction"),
+                    xytext=(0, 4), textcoords="offset points",
+                    ha="center", fontsize=7.4, color=MUTED)
+    ax.plot([], [], color=warna, linewidth=1.6, label="train loss")
+    ax.plot([], [], color=INK2, linewidth=1.2, linestyle=(0, (3, 2)),
+            label="val loss")
+    ax.set_title(judul, fontsize=9.8, color=INK, pad=15)
+    ax.set_xlabel("epoch (tahap disambung)", fontsize=8.4, color=INK2)
+    ax.legend(loc="upper right", fontsize=7.6, frameon=False)
+
+def _kurva_val(ax, runs: Path, run_nama: str, warna: str, judul: str):
+    """val_bacc & val_auc per epoch, 3 seed. Epoch tanpa validasi dilewati,
+    bukan diisi nol - tahap contrastive memang tidak mengukur keduanya."""
+    rapikan(ax)
+    ax.set_ylim(0.38, 1.03)
+    ax.axhline(0.5, color=GRID, linewidth=1.0, zorder=1)
+    for sd in SEEDS:
+        xs, bacc, auc = [], [], []
+        for i, r in enumerate(_baca_history(runs / f"{run_nama}__{sd}"), start=1):
+            if r.get("val_bacc") is None:
+                continue
+            xs.append(i); bacc.append(r["val_bacc"]); auc.append(r.get("val_auc"))
+        ax.plot(xs, bacc, color=warna, linewidth=1.0, alpha=0.8, zorder=3)
+        ax.plot(xs, auc, color=INK2, linewidth=0.9, alpha=0.45,
+                linestyle=(0, (3, 2)), zorder=2)
+    ax.plot([], [], color=warna, linewidth=1.6, label="val bacc")
+    ax.plot([], [], color=INK2, linewidth=1.2, linestyle=(0, (3, 2)),
+            label="val AUC")
+    ax.set_title(judul, fontsize=9.8, color=INK, pad=7)
+    ax.set_xlabel("epoch", fontsize=8.4, color=INK2)
+    ax.legend(loc="lower right", fontsize=7.6, frameon=False)
+
+def _roc_panel(ax, runs: Path, berkas: str, judul: str):
+    """ROC dari skor per-crop tersimpan; satu kurva tipis per seed."""
+    rapikan(ax)
+    ax.plot([0, 1], [0, 1], color=GRID, linewidth=1.2, zorder=1)
+    ax.set_xlim(-0.02, 1.02); ax.set_ylim(-0.02, 1.02)
+    for aug, metode, run, warna in AUG_METODE:
+        aucs = []
+        for sd in SEEDS:
+            f = runs / f"{run}__{sd}" / berkas
+            if not f.exists():
+                continue
+            z = np.load(f)
+            y, s = z["y_true"].astype(int), z["y_score"].astype(float)
+            fpr, tpr = kurva_roc(y, s)
+            ax.plot(fpr, tpr, color=warna, linewidth=1.0, alpha=0.5, zorder=2)
+            aucs.append(roc_auc(y, s))
+        if aucs:
+            ax.plot([], [], color=warna, linewidth=2.0,
+                    label=f"{metode}  {np.mean(aucs):.4f} ± {np.std(aucs):.4f}")
+    ax.set_title(judul, fontsize=9.8, color=INK, pad=7)
+    ax.set_xlabel("FPR", fontsize=8.4, color=INK2)
+    ax.set_ylabel("TPR", fontsize=8.8, color=INK2)
+    ax.legend(loc="lower right", fontsize=7.4, frameon=False)
+
+def figur_10(out: Path):
+    runs = ROOT / "outputs/runs_sdnet"
+    fig, axes = plt.subplots(1, 3, figsize=(13.6, 4.6))
+    fig.patch.set_facecolor(SURFACE)
+    axes[0].set_ylabel("loss", fontsize=9, color=INK2)
+    for ax, (aug, metode, run, warna) in zip(axes, AUG_METODE):
+        _kurva_loss(ax, runs, run, warna, f"{aug}  ({metode})")
+
+    fig.suptitle("Percobaan A (SDNET2018): loss per epoch, satu panel per augmentasi",
+                 fontsize=13, color=INK, fontweight="bold", y=0.995)
+    fig.text(0.5, 0.008,
+             "Tiga garis per panel = tiga seed (42/43/44); garis putus-putus = "
+             "val loss. Garis titik-titik tegak = pergantian TAHAP, dan skala "
+             "loss di kiri serta kanan garis itu berasal\n"
+             "dari fungsi objektif yang berbeda (NT-Xent/SupCon vs BCE probe), "
+             "jadi lompatan di situ bukan kejadian latihan. ce__hier_addone "
+             "hanya punya satu tahap karena memang tidak\n"
+             "melewati pra-latih kontrastif. Panjang tahap berbeda antar seed "
+             "karena early stopping.  Sumber: outputs/runs_sdnet/*/history.csv",
+             ha="center", fontsize=8.1, color=MUTED)
+    fig.tight_layout(rect=(0, 0.115, 1, 0.94))
+    simpan(fig, out, "10_loss_per_augmentasi_sdnet.png")
+
+def figur_11(out: Path):
+    runs = ROOT / "outputs/runs_sdnet"
+    fig = plt.figure(figsize=(13.6, 8.6))
+    fig.patch.set_facecolor(SURFACE)
+    gs = fig.add_gridspec(2, 3, hspace=0.40, wspace=0.26)
+
+    for k, (aug, metode, run, warna) in enumerate(AUG_METODE):
+        ax = fig.add_subplot(gs[0, k])
+        _kurva_val(ax, runs, run, warna, f"{aug}  ({metode})")
+        if k == 0:
+            ax.set_ylabel("validation", fontsize=9, color=INK2)
+
+    _roc_panel(fig.add_subplot(gs[1, 0]), runs, "val_scores.npz",
+               "ROC validation (n=408)")
+    _roc_panel(fig.add_subplot(gs[1, 1]), runs, "test_scores.npz",
+               "ROC test deck (hold-out, n=402)")
+
+    # --- panel kanan bawah: val -> test untuk seed yang SAMA.
+    #     Menghubungkan dua angka milik satu checkpoint; rerata saja akan
+    #     menyembunyikan seed mana yang jatuh.
+    ax = fig.add_subplot(gs[1, 2])
+    rapikan(ax)
+    for aug, metode, run, warna in AUG_METODE:
+        for sd in SEEDS:
+            fv = runs / f"{run}__{sd}" / "val_scores.npz"
+            ft = runs / f"{run}__{sd}" / "test_scores.npz"
+            if not (fv.exists() and ft.exists()):
+                continue
+            zv, zt = np.load(fv), np.load(ft)
+            av = roc_auc(zv["y_true"].astype(int), zv["y_score"].astype(float))
+            at = roc_auc(zt["y_true"].astype(int), zt["y_score"].astype(float))
+            ax.plot([0, 1], [av, at], color=warna, linewidth=1.1, alpha=0.6,
+                    marker="o", markersize=3.6, zorder=3)
+    for aug, metode, run, warna in AUG_METODE:
+        ax.plot([], [], color=warna, linewidth=1.8, marker="o", markersize=4,
+                label=metode)
+    ax.set_xlim(-0.14, 1.14)
+    ax.set_xticks([0, 1]); ax.set_xticklabels(["val", "test deck"], fontsize=9)
+    ax.set_ylabel("AUC", fontsize=8.8, color=INK2)
+    ax.set_title("val -> test, per seed", fontsize=9.8, color=INK, pad=7)
+    ax.legend(loc="lower left", fontsize=7.4, frameon=False)
+
+    fig.suptitle("Percobaan A (SDNET2018): validasi per epoch, dan ROC validasi vs test",
+                 fontsize=13, color=INK, fontweight="bold", y=0.985)
+    fig.text(0.5, 0.008,
+             "Baris atas: validasi di SDNET TIDAK jenuh - kurvanya masih "
+             "bergerak sampai akhir, jadi pemilihan checkpoint lewat val "
+             "memang berarti di sini. Bandingkan bagian 9d: di susunan\n"
+             "ayam val jenuh di 1.0000 dan tidak bisa memilih apa pun. Baris "
+             "bawah: tiap kurva tipis satu seed, angka di legenda rerata ± "
+             "simpangan 3 seed. Panel kanan bawah menghubungkan\n"
+             "val dan test untuk seed yang SAMA - garis yang menukik = "
+             "checkpoint itu tidak membawa kemampuannya ke data baru.  "
+             "Sumber: outputs/runs_sdnet/*/history.csv, *_scores.npz",
+             ha="center", fontsize=8.1, color=MUTED)
+    fig.tight_layout(rect=(0, 0.085, 1, 0.945))
+    simpan(fig, out, "11_validasi_dan_roc_sdnet.png")
+
+def figur_12(out: Path):
+    """Galeri augmentasi: crop yang SAMA lewat tiga kebijakan, dua dataset.
+
+    Memakai dataset.augment() apa adanya - kode yang sama dengan latihan - dan
+    `return_params=True` mengembalikan op yang benar-benar menyala, jadi
+    caption tiap kotak adalah catatan eksekusi, bukan salinan config. Pada
+    hier_addone sebagian op sengaja tidak menyala karena level yang tertarik
+    lebih rendah; itu memang isi metodenya (Zhang & Ma, CVPR 2022).
+    """
+    import random
+    import sys
+    sys.path.insert(0, str(ROOT / "src"))
+    import yaml
+    from dataset import augment, policy_by_name
+
+    SUMBER = [("configs/config_sdnet.yaml", "data/crops_sdnet",
+               "SDNET2018 - ubin retak (percobaan A)", "retak"),
+              ("configs/config_pio_dev2.yaml", "data/crops_pio_dev2",
+               "crop ayam - kelas dead (percobaan B)", "dead")]
+    N_VAR = 5
+
+    blok = []
+    for cfg_rel, crops_rel, judul, kelas in SUMBER:
+        cfg_f = ROOT / cfg_rel
+        man = ROOT / crops_rel / "manifest.csv"
+        if not (cfg_f.exists() and man.exists()):
+            print(f"  figur 12: {crops_rel} tidak ada, dilewati")
+            continue
+        cfg = yaml.safe_load(cfg_f.read_text(encoding="utf-8"))
+        rows = [r for r in muat_manifest(f"{crops_rel}/manifest.csv")
+                if r["split"] == "train" and r["label_name"] == kelas]
+        if not rows:
+            print(f"  figur 12: {crops_rel} tidak punya baris train '{kelas}'")
+            continue
+        # Deterministik: urutkan nama lalu ambil yang tengah, supaya gambar
+        # ini sama persis tiap kali dibuat ulang.
+        rows.sort(key=lambda r: r["path"])
+        r = rows[len(rows) // 2]
+        img = imread(ROOT / crops_rel / r["path"])
+        if img is None:
+            continue
+        size = int(cfg["classifier"]["image_size"])
+        blok.append((cfg, letterbox(img, size), judul, r["path"]))
+
+    if not blok:
+        print("  figur 12 dilewati: tidak ada sumber crop yang bisa dibaca")
+        return
+
+    n_baris = len(blok) * len(AUG_METODE)
+    fig, axes = plt.subplots(n_baris, N_VAR + 1,
+                             figsize=(1.92 * (N_VAR + 1), 2.16 * n_baris))
+    fig.patch.set_facecolor(SURFACE)
+    axes = np.atleast_2d(axes)
+
+    baris = 0
+    for cfg, asli, judul_blok, nama_crop in blok:
+        for aug, metode, _run, warna in AUG_METODE:
+            ax = axes[baris][0]
+            ax.imshow(bgr2rgb(asli)); ax.set_xticks([]); ax.set_yticks([])
+            for s in ax.spines.values():
+                s.set_color(warna); s.set_linewidth(1.6)
+            ax.set_ylabel(f"{aug}\n({metode})", fontsize=8.0, color=INK)
+            if baris % len(AUG_METODE) == 0:
+                ax.set_title(f"{judul_blok}\nasli (sebelum augmentasi)",
+                             fontsize=7.6, color=INK, pad=5)
+            else:
+                ax.set_title("asli", fontsize=7.6, color=INK2, pad=5)
+
+            pol = policy_by_name(cfg, aug)
+            for v in range(N_VAR):
+                ax = axes[baris][v + 1]
+                ax.set_xticks([]); ax.set_yticks([])
+                for s in ax.spines.values():
+                    s.set_color(BASE)
+                rng = random.Random(1000 + 17 * v + 101 * baris)
+                hasil, par = augment(asli.copy(), rng, pol, return_params=True)
+                ax.imshow(bgr2rgb(hasil))
+                ops = ", ".join(par["ops"]) if par["ops"] else "(tidak ada op menyala)"
+                lv = f"level {par['level']}  " if par["level"] is not None else ""
+                ax.set_title(f"{lv}{ops}", fontsize=5.9, color=MUTED, pad=4,
+                             wrap=True)
+            baris += 1
+
+    fig.suptitle("Augmentasi tiap kebijakan, dijalankan pada crop yang sama",
+                 fontsize=13, color=INK, fontweight="bold", y=0.998)
+    fig.text(0.5, 0.004,
+             "Kolom pertama = crop sebelum augmentasi (tepi berwarna menandai "
+             "kebijakannya). Lima kolom sisanya = lima tarikan acak dari "
+             "kebijakan yang SAMA. Judul tiap kotak mencantumkan op\n"
+             "yang benar-benar menyala, dibaca dari "
+             "dataset.augment(return_params=True) - bukan daftar op di config. "
+             "Ketiga kebijakan identik di kedua config (diperiksa), jadi "
+             "perbedaan antar blok murni\n"
+             "datang dari isi gambarnya.  Sumber: data/crops_sdnet + "
+             "data/crops_pio_dev2, lewat src/dataset.py",
+             ha="center", fontsize=8.1, color=MUTED)
+    fig.tight_layout(rect=(0.012, 0.042, 1, 0.962))
+    simpan(fig, out, "12_galeri_augmentasi.png")
+
+def figur_13(out: Path):
+    LENGAN = [("outputs/runs_pio_dev2", "lengan asli"),
+              ("outputs/runs_pio_dev2_eq", "lengan eq48")]
+    fig, axes = plt.subplots(2, 3, figsize=(13.6, 8.2))
+    fig.patch.set_facecolor(SURFACE)
+    for i, (base, judul_lengan) in enumerate(LENGAN):
+        runs = ROOT / base
+        for k, (aug, metode, run, warna) in enumerate(AUG_METODE):
+            ax = axes[i][k]
+            _kurva_loss(ax, runs, run, warna,
+                        f"{aug} ({metode}) - {judul_lengan}")
+            if k == 0:
+                ax.set_ylabel("loss", fontsize=9, color=INK2)
+
+    fig.suptitle("Percobaan B (domain ayam mati kedua): loss per epoch, per augmentasi",
+                 fontsize=13, color=INK, fontweight="bold", y=0.995)
+    fig.text(0.5, 0.008,
+             "Baris atas lengan asli, baris bawah lengan eq48. Tiga garis per "
+             "panel = tiga seed; putus-putus = val loss. Tahap probe/ce di "
+             "sini PENDEK (16-40 epoch) karena early stopping\n"
+             "berhenti cepat - val sudah sempurna sejak epoch-epoch awal. "
+             "Itu justru gejala pokok percobaan B: val jenuh, jadi tidak ada "
+             "yang bisa dipilih dengannya (bagian 10.2), dan loss yang\n"
+             "terlihat rapi di sini tidak menjamin apa pun di luar val.  "
+             "Sumber: outputs/runs_pio_dev2{,_eq}/*/history.csv",
+             ha="center", fontsize=8.1, color=MUTED)
+    fig.tight_layout(rect=(0, 0.105, 1, 0.945))
+    simpan(fig, out, "13_loss_per_augmentasi_dev2.png")
+
+def _benchmark_per_lengan(d: dict, kunci_lengan: str) -> dict:
+    """Kelompokkan entri benchmark per (metode, intervensi) untuk satu lengan.
+
+    fixed_chick_dev2.json memuat KEDUA lengan dalam satu daftar 18 entri, dan
+    run_id-nya identik antar lengan - yang membedakan hanya config crop-nya.
+    Memisahkannya lewat run_id akan diam-diam mencampur dua lengan.
+    """
+    g = {}
+    for iv, entri in d["interventions"].items():
+        for e in entri:
+            if _lengan_dari_entri(e) != kunci_lengan:
+                continue
+            g.setdefault((e["method"], iv), []).append(
+                e["relative_clean"]["pooled_auc"])
+    return g
+
+def figur_14(out: Path):
+    """Validasi dan evaluasi held-out percobaan B.
+
+    Percobaan B memakai protocol.development_only: TIDAK ada split test, dan
+    test_scores.npz memang tidak ada di 18 run itu (diperiksa langsung di
+    direktori run). Jadi panel kanan bawah BUKAN split test melainkan
+    benchmark uji chick - satu-satunya evaluasi held-out lengan ini - dan
+    judulnya menyebut itu apa adanya.
+    """
+    fig = plt.figure(figsize=(13.6, 8.6))
+    fig.patch.set_facecolor(SURFACE)
+    gs = fig.add_gridspec(2, 3, hspace=0.40, wspace=0.26)
+    runs_asli = ROOT / "outputs/runs_pio_dev2"
+
+    # --- baris atas: validasi per epoch (lengan asli) + dua ROC validasi
+    for k, (aug, metode, run, warna) in enumerate(AUG_METODE):
+        ax = fig.add_subplot(gs[0, k])
+        _kurva_val(ax, runs_asli, run, warna,
+                   f"{aug} ({metode}) - lengan asli")
+        if k == 0:
+            ax.set_ylabel("validation", fontsize=9, color=INK2)
+
+    _roc_panel(fig.add_subplot(gs[1, 0]), runs_asli, "val_scores.npz",
+               "ROC validation, lengan asli (n=222)")
+    _roc_panel(fig.add_subplot(gs[1, 1]),
+               ROOT / "outputs/runs_pio_dev2_eq", "val_scores.npz",
+               "ROC validation, lengan eq48 (n=222)")
+
+    # --- panel kanan bawah: benchmark uji chick, asli -> acak16, dua lengan.
+    #     Lengan dibedakan lewat garis penuh vs putus-putus, bukan warna:
+    #     warna sudah dipakai untuk metode di seluruh laporan.
+    ax = fig.add_subplot(gs[1, 2])
+    rapikan(ax)
+    f = ROOT / "outputs/predictions/fixed_chick_dev2.json"
+    if not f.exists():
+        ax.text(0.5, 0.5, "fixed_chick_dev2.json belum ada", ha="center",
+                va="center", fontsize=9, color=MUTED, transform=ax.transAxes)
+    else:
+        d = json.loads(f.read_text(encoding="utf-8"))
+        for lengan, gaya in [("asli", "-"), ("eq48", (0, (4, 2)))]:
+            g = _benchmark_per_lengan(d, lengan)
+            for aug, metode, run, warna in AUG_METODE:
+                m = []
+                for xi, iv in enumerate(["asli", "acak16"]):
+                    ys = g.get((metode, iv), [])
+                    m.append(float(np.mean(ys)) if ys else float("nan"))
+                    if ys:
+                        ax.scatter([xi] * len(ys), ys, s=22, color=warna,
+                                   alpha=0.5, zorder=3)
+                ax.plot([0, 1], m, color=warna, linewidth=1.6, alpha=0.9,
+                        linestyle=gaya, marker="o", markersize=5,
+                        markeredgecolor="white", markeredgewidth=1.0, zorder=4,
+                        label=f"{lengan}/{metode}  {m[0]:.4f} -> {m[1]:.4f}")
+        ax.axhline(0.5, color=GRID, linewidth=1.2, zorder=1)
+        ax.set_xlim(-0.35, 1.35); ax.set_xticks([0, 1])
+        ax.set_xticklabels(["crop asli", "acak16"], fontsize=9)
+        ax.set_ylabel("pooled AUC (relative_clean)", fontsize=8.8, color=INK2)
+    ax.set_title("benchmark uji chick - BUKAN split test", fontsize=9.8,
+                 color=INK, pad=7)
+    ax.legend(loc="best", fontsize=6.4, frameon=False, ncol=1)
+
+    fig.suptitle("Percobaan B: validasi per epoch, ROC validasi, dan evaluasi held-out",
+                 fontsize=13, color=INK, fontweight="bold", y=0.985)
+    fig.text(0.5, 0.008,
+             "Percobaan B memakai protocol.development_only: manifestnya TIDAK "
+             "punya split test dan test_scores.npz memang tidak ada di 18 run "
+             "itu, jadi panel kanan bawah BUKAN split test - itu\n"
+             "benchmark uji chick, satu-satunya evaluasi held-out lengan ini. "
+             "Baris atas dan kedua panel ROC memperlihatkan masalahnya: "
+             "validasi menempel di 1.0000 untuk ketiga metode di kedua\n"
+             "lengan, jadi val tidak bisa membedakan apa pun. Garis penuh = "
+             "lengan asli, putus-putus = eq48; titik kecil = seed, titik besar "
+             "= rerata 3 seed.  Sumber: outputs/runs_pio_dev2{,_eq}/*/\n"
+             "val_scores.npz dan history.csv, outputs/predictions/fixed_chick_dev2.json",
+             ha="center", fontsize=8.1, color=MUTED)
+    fig.tight_layout(rect=(0, 0.095, 1, 0.945))
+    simpan(fig, out, "14_validasi_dan_benchmark_dev2.png")
+
+
 FIGUR = {1: figur_1, 2: figur_2, 3: figur_3, 4: figur_4, 5: figur_5,
-         6: figur_6, 7: figur_7, 8: figur_8, 9: figur_9}
+         6: figur_6, 7: figur_7, 8: figur_8, 9: figur_9,
+         10: figur_10, 11: figur_11, 12: figur_12, 13: figur_13,
+         14: figur_14}
 
 
 def main():

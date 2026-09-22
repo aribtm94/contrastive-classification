@@ -367,6 +367,42 @@ merotasi crop menghancurkan ciri yang justru ingin dipelajari. Pada SDNET
 pembatasan ini dipertahankan walau retak beton tidak punya orientasi baku -
 karena yang diuji adalah pipeline apa adanya.
 
+Karena "per metode" dan "per augmentasi" menamai hal yang sama di laporan ini,
+kebijakan augmentasi ketiga metode ditampilkan berdampingan pada crop yang
+identik - sekali untuk tiap percobaan:
+
+![Galeri augmentasi](laporan_akhir/12_galeri_augmentasi.png)
+
+*Gambar 12 - Tiga baris atas: satu ubin SDNET2018. Tiga baris bawah: satu crop
+ayam mati `crops_pio_dev2`. Kolom pertama = crop sebelum augmentasi (warna tepi
+menandai kebijakannya); lima kolom sisanya = lima tarikan acak dari kebijakan
+yang **sama**. Judul tiap kotak mencantumkan op yang benar-benar menyala,
+dibaca dari `dataset.augment(return_params=True)` - bukan daftar op di config,
+karena yang penting adalah apa yang terjadi, bukan apa yang tersedia. Untuk
+`hier_addone` level yang terundi ikut dicetak: op dengan `level > i` dilewati,
+jadi `level 1` jauh lebih ringan daripada `level 4`. Ketiga kebijakan
+**identik** antara `config_sdnet.yaml` dan `config_pio_dev2.yaml` (diperiksa
+kunci per kunci), jadi seluruh perbedaan antara blok atas dan bawah murni
+datang dari isi gambarnya. Sumber: `data/crops_sdnet`, `data/crops_pio_dev2`,
+lewat `src/dataset.py`.*
+
+Dua hal terlihat langsung di gambar itu, dan keduanya sudah terukur di tempat
+lain di laporan ini:
+
+1. **Crop ayam punya bantalan letterbox abu; ubin SDNET tidak.** Pita abu di
+   atas dan bawah tiap crop ayam adalah bantalan `letterbox()` - ubin SDNET
+   sudah persegi, jadi bantalannya nol. Lebar pita itu berkorelasi dengan
+   bentuk bbox, yakni dengan kelasnya (§6.2, `ukuran_bbox` 0.9976). Jadi
+   sebagian jalan pintas percobaan B sudah terlihat dengan mata di tahap
+   pra-pemrosesan, sebelum model apa pun dijalankan.
+2. **`simclr` dan `stacked_randaug` jauh lebih merusak daripada
+   `hier_addone`.** Beberapa tarikan `simclr` memutihkan atau menghitamkan
+   ubin hampir seluruhnya, dan `stacked_randaug` menumpuk empat op sekaligus
+   (mis. `RA:Brig+Post+Auto+Sola`) sampai teksturnya tak lagi terbaca mata.
+   `hier_addone` dengan level rendah nyaris tidak mengubah apa pun. Ini
+   memperkuat §5.2: intensitas augmentasi ikut berubah bersama fungsi loss,
+   jadi perbandingan antar metode tidak bisa mengisolasi salah satunya.
+
 ### 5.3 Protokol yang mengikat
 
 - Ambang klasifikasi **selalu** dikalibrasi dari validation (`tau_val`), tidak
@@ -517,6 +553,59 @@ tekstur; warnanya tidak relevan. Model bereaksi keras terhadap perusakan yang
 secara fisik menghapus objeknya, dan mengabaikan perusakan yang tidak. Inilah
 yang dimaksud dengan "model membaca hal yang benar", dan ini terukur, bukan
 ditafsirkan.
+
+### 7.4 Bagaimana jalannya latihan: loss, validation, dan ROC akhir
+
+Tiga tabel di atas hanya menunjukkan titik akhir. Dua gambar berikut
+menunjukkan jalan menuju titik itu, per augmentasi dan per seed.
+
+![Loss per augmentasi SDNET](laporan_akhir/10_loss_per_augmentasi_sdnet.png)
+
+*Gambar 10 - Pertumbuhan loss di SDNET2018, satu panel per augmentasi/metode
+(keduanya sama - lihat §5.2), tiga garis = tiga seed. Garis putus-putus = loss
+validation, garis tegak bertitik = batas tahap. Tahap dipisah karena skalanya
+memang beda: NT-Xent dan SupCon dihitung atas pasangan, BCE probe atas satu
+crop, jadi menyambungkan keduanya jadi satu garis akan tampak seperti
+peristiwa latihan yang tidak pernah terjadi. Sumber:
+`outputs/runs_sdnet/*/history.csv`.*
+
+Satu hal di gambar itu wajib dibaca dengan hati-hati: **loss `supcon`
+praktis datar** (4.263 ke 4.058 sepanjang 60 epoch, seed 42), sementara `selfcon`
+turun tajam dari 3.929 ke 1.268. Kalau besaran penurunan loss dipakai sebagai
+ukuran mutu, `supcon` akan disebut gagal belajar - padahal `supcon` justru
+mencetak **AUC test tertinggi** (0.8573, §7.1). Loss kontrastif dihitung
+relatif terhadap negatif di dalam batch; nilainya tidak sebanding antar loss
+dan **bukan** alat ukur kualitas. Yang mengukur adalah AUC pada data yang
+belum dilihat.
+
+![Validation dan ROC SDNET](laporan_akhir/11_validasi_dan_roc_sdnet.png)
+
+*Gambar 11 - Baris atas: `val_bacc` (garis penuh) dan `val_auc` (putus-putus)
+per epoch, hanya pada epoch yang benar-benar diukur - epoch tanpa validation
+dilewati, tidak digambar sebagai nol. Baris bawah: ROC pada validation deck
+(n=408) dan pada test deck (n=402), tiga garis tipis = tiga seed. Sumber:
+`outputs/runs_sdnet/*/history.csv`, `val_scores.npz`, `test_scores.npz`.*
+
+Dua hal terukur dari Gambar 11:
+
+| | AUC validation (n=408) | AUC test (n=402) | selisih |
+|---|---:|---:|---:|
+| `selfcon` + `simclr` | 0.8362 ± 0.0136 | 0.8035 ± 0.0050 | −0.033 |
+| `supcon` + `stacked_randaug` | 0.8875 ± 0.0116 | 0.8573 ± 0.0020 | −0.030 |
+| `ce` + `hier_addone` | 0.8972 ± 0.0091 | 0.8403 ± 0.0079 | −0.057 |
+
+1. **Validation SDNET tidak jenuh, dan kurvanya bergerak.** Pada tahap probe,
+   `val_bacc` `ce` naik dari 0.631-0.710 ke 0.823-0.828 (rentang tiga seed) dan
+   `selfcon` dari 0.698-0.732 ke 0.759-0.805; hanya `supcon` yang praktis datar,
+   berangkat 0.812-0.825 dan berakhir 0.801-0.821. Bandingkan dengan percobaan
+   ayam, yang mencetak 1.0000 pada **epoch 1** (§9(d)). Kurva yang bergerak
+   inilah yang membuat pemilihan epoch dan kalibrasi ambang punya arti.
+2. **Setiap seed turun dari validation ke test, di 3/3 metode.** Selisih
+   −0.030 sampai −0.057 adalah harga generalisasi yang normal, bukan kegagalan;
+   yang penting adalah arahnya konsisten dan besarnya kecil. `ce` memimpin di
+   validation (0.8972) tetapi `supcon` yang memimpin di test (0.8573) - urutan
+   **berubah** saat pindah ke data yang tidak dipakai memilih apa pun. Itu
+   alasan konkret mengapa metode tidak boleh dipilih dari validation.
 
 ---
 
@@ -819,6 +908,101 @@ skala, dan latar, sehingga tidak ada ciri global yang tersisa untuk dijadikan
 jalan pintas. Pada rancangan itu, satu-satunya hal yang membedakan crop adalah
 ayamnya sendiri.
 
+### 10.6 Bagaimana jalannya latihan percobaan B, dan mengapa tidak ada ROC test
+
+![Loss per augmentasi dev2](laporan_akhir/13_loss_per_augmentasi_dev2.png)
+
+*Gambar 13 - Pertumbuhan loss pada crop ayam dev2, lengan `asli`, satu panel
+per augmentasi/metode, tiga garis = tiga seed. Susunan panelnya sengaja sama
+dengan Gambar 10 supaya kedua percobaan bisa dibandingkan mata langsung.
+Perhatikan panjang tahap probe: `ce` berhenti di epoch 16-22 dan `supcon` di
+16-17 karena early stopping - validation-nya sudah sempurna, jadi tidak ada
+lagi yang bisa diperbaiki. Sumber: `outputs/runs_pio_dev2/*/history.csv`.*
+
+![Validation dan benchmark dev2](laporan_akhir/14_validasi_dan_benchmark_dev2.png)
+
+*Gambar 14 - Kiri: ROC validation (n=222) untuk kedua lengan. Kanan: benchmark
+uji chick per metode, `asli` ke `acak16`, scorer `relative_clean`. Panel kanan
+**bukan split test** - lihat penjelasan di bawah. Lengan dibaca dari
+`config_snapshot.crops.equalize_resolution`, bukan dari nama berkas registry.
+Sumber: `outputs/runs_pio_dev2{,_eq}/*/val_scores.npz`,
+`outputs/predictions/fixed_chick_dev2.json`.*
+
+**Percobaan B tidak punya split test, jadi tidak ada ROC test yang bisa
+digambar.** Keempat config dev2 menyetel `protocol.development_only: true`,
+yang berarti manifest-nya hanya memuat `train` + `val`; diperiksa pada seluruh
+18 run: `val_scores.npz` ada di 18/18, `test_scores.npz` **tidak ada di satu
+pun**. Ini konsekuensi protokol, bukan berkas yang hilang - split test ditahan
+justru supaya tidak terpakai selama pengembangan. Panel kanan Gambar 14
+karenanya diisi **benchmark uji chick** (943 crop clean dari tahap deteksi,
+§3.4), yang memang satu-satunya himpunan tertahan yang tersedia di percobaan
+ini. Menyebutnya "test" akan mengulang persis kesalahan pelabelan yang sudah
+ditemukan dua kali di `report.py` (§11).
+
+ROC validation kiri menegaskan §10.2 dengan angka:
+
+| | AUC val lengan `asli` | AUC val lengan `eq48` |
+|---|---:|---:|
+| `selfcon` + `simclr` | 0.9993 ± 0.0005 | 0.9968 ± 0.0007 |
+| `supcon` + `stacked_randaug` | 1.0000 ± 0.0000 | 1.0000 ± 0.0000 |
+| `ce` + `hier_addone` | 1.0000 ± 0.0000 | 1.0000 ± 0.0000 |
+
+Empat dari enam sel **persis 1.0000 dengan simpangan nol** - tiga seed, tidak
+satu crop pun salah dari 222. Kurva ROC-nya menempel ke sudut kiri-atas.
+Bandingkan langsung dengan panel bawah Gambar 11, di mana ROC SDNET adalah
+lengkungan sungguhan. Dua gambar itu berdampingan adalah bentuk visual dari
+seluruh masalah proyek ini: validation ayam **tidak mengandung informasi**
+untuk memilih apa pun, sementara validation SDNET mengandung.
+
+Panel kanan menambahkan dua hal yang tidak terlihat di tabel §10.4, yang
+memakai scorer `absolute`:
+
+| lengan / metode | `asli` | `acak16` | arah |
+|---|---:|---:|---|
+| `eq48` / `supcon` | **0.6655** | 0.6148 | turun 0.051 |
+| `eq48` / `ce` | 0.6321 | 0.6170 | turun 0.015 |
+| `asli` / `ce` | 0.5930 | 0.5236 | turun 0.069 |
+| `asli` / `supcon` | 0.5752 | 0.4683 | turun 0.107 |
+| `eq48` / `selfcon` | 0.5365 | 0.4260 | turun 0.111 |
+| `asli` / `selfcon` | **0.4850** | 0.4294 | turun 0.056 |
+
+1. **`asli`/`selfcon` berangkat dari bawah 0.5** (0.4850 pada data yang tidak
+   dirusak sama sekali). Di bawah 0.5 berarti lebih buruk daripada melempar
+   koin: urutan skornya sedikit **terbalik** terhadap label. Angka itu tidak
+   perlu ditafsirkan sebagai "hampir acak" - ia memang praktis acak, dan
+   perusakan `acak16` menurunkannya lagi ke 0.4294 tanpa mengubah kesimpulan
+   apa pun.
+2. **Kedua lengan harus dibaca terpisah, bukan dirata-ratakan.** `eq48`/`supcon`
+   (0.6655) dan `asli`/`supcon` (0.5752) berbeda **0.090 AUC** dengan loss,
+   augmentasi, seed, dan crop yang identik - satu-satunya yang beda adalah
+   penyamaan sisi pendek ke 48 px. Merata-ratakan keduanya menjadi satu angka
+   "supcon" akan menyembunyikan efek terbesar yang ada di percobaan ini.
+
+3. **Kedua scorer tidak sepakat soal arahnya, dan itu wajib dinyatakan.**
+   Tabel di atas memakai `relative_clean` (peringkat di dalam frame, dihitung
+   dari jarak fitur ke median frame), dan di sana `acak16` menurunkan skor di
+   **6/6** rerata dan **16/18** checkpoint. Tetapi pada scorer `absolute`
+   (kepala sigmoid dengan ambang `tau_val`) - scorer yang dipakai tabel §10.4 -
+   `acak16` justru **menaikkan** skor di **5/6** rerata dan **12/18**
+   checkpoint, sampai +0.070 pada `eq48`/`selfcon`.
+
+Ketidaksepakatan itu bukan galat; keduanya mengukur hal yang berbeda atas
+checkpoint yang sama. `absolute` membaca keluaran kepala klasifikasi, sedangkan
+`relative_clean` membuang seluruh nilai mutlak dan hanya menyisakan urutan di
+dalam satu frame. Kesimpulan yang boleh ditarik dari keduanya bersama:
+
+> **Turun di `relative_clean` tidak boleh dibaca sebagai "model membaca bentuk
+> ayam".** Kalau model benar-benar bergantung pada pose, mengacak susunan crop
+> seharusnya merusaknya pada **kedua** scorer. Yang terjadi: satu scorer turun,
+> satu naik. Selain itu seluruh titik awalnya - 0.4850 sampai 0.6655 - berada
+> di bawah lantai 0.8831 (§10.4), jadi yang dirusak `acak16` adalah ciri yang
+> belum terbukti ayamnya.
+
+Ini konsisten dengan pemeriksaan terpisah yang sudah dicatat sebelumnya: pada
+crop yang diacak, performa checkpoint ayam **tidak runtuh** seperti yang terjadi
+pada SDNET (§7.3, turun 3/3 pada kedua arah perusakan fisik). Model ayam membaca
+tekstur dan statistik global, bukan pose - dan `acak16` mempertahankan keduanya.
+
 ---
 
 ## 11. Cacat evaluasi yang ditemukan
@@ -996,10 +1180,27 @@ python src/figur_laporan_akhir.py --figur all
 # atau sebagian: --figur 2,3,7
 ```
 
-Menghasilkan sembilan PNG ke `outputs/reports/laporan_akhir/`. Seluruhnya
-membaca berkas yang sudah ada; `ultralytics` **tidak terpasang** di lingkungan
-ini, jadi deteksi memang tidak bisa dijalankan ulang dan overlay kotak pada
-Gambar 2 dibaca dari `detections.json` yang tersimpan.
+Menghasilkan **empat belas** PNG ke `outputs/reports/laporan_akhir/`.
+Seluruhnya membaca berkas yang sudah ada; `ultralytics` **tidak terpasang** di
+lingkungan ini, jadi deteksi memang tidak bisa dijalankan ulang dan overlay
+kotak pada Gambar 2 dibaca dari `detections.json` yang tersimpan.
+
+Gambar 10-14 (kurva loss, kurva validation, ROC, galeri augmentasi) dibaca dari
+`history.csv`, `val_scores.npz`, dan `test_scores.npz` tiap run, ditambah
+`fixed_chick_dev2.json`. Sel kosong di `history.csv` berarti "tidak diukur pada
+epoch itu" dan diterjemahkan menjadi `None`, **bukan** `0.0` - kalau tidak,
+kurva validation akan tampak jatuh ke nol di epoch yang sebenarnya hanya
+dilewati. Untuk Gambar 12 crop dipilih deterministik (urut `path`, ambil
+elemen tengah) supaya gambarnya tidak berubah tiap kali skrip dijalankan.
+
+Lengan `asli` vs `eq48` pada Gambar 7, 9, dan 14 dibaca dari
+`config_snapshot.crops.equalize_resolution.enabled`, **bukan** dari substring
+nama berkas registry. Heuristik nama berkas kebetulan benar untuk dev2
+(diperiksa: 18/18 entri sepakat, dan PNG-nya byte-identik sebelum/sesudah
+perubahan ini), tetapi bentuknya persis kegagalan senyap yang sudah tercatat:
+lengan baru yang tidak memakai pola nama itu akan jatuh ke `asli` tanpa error
+dan dua lengan tercampur dalam satu rerata. `eval_fixed_chick.py:266` memang
+menulis blok `crops` ke JSON untuk keperluan itu.
 
 ### 13.4 Uji regresi
 
@@ -1063,7 +1264,12 @@ Seluruhnya di `outputs/reports/laporan_akhir/`, dibuat oleh
 | `06_roc_sdnet.png` | §7 |
 | `07_intervensi_sdnet_vs_ayam.png` | §9 |
 | `08_sdnet_vs_paper.png` | §8 |
-| `09_papan_skor_dev2.png` | §10 |
+| `09_papan_skor_dev2.png` | §10.4 |
+| `10_loss_per_augmentasi_sdnet.png` | §7.4 |
+| `11_validasi_dan_roc_sdnet.png` | §7.4 |
+| `12_galeri_augmentasi.png` | §5.2 |
+| `13_loss_per_augmentasi_dev2.png` | §10.6 |
+| `14_validasi_dan_benchmark_dev2.png` | §10.6 |
 
 ### 14.4 Daftar pustaka
 
