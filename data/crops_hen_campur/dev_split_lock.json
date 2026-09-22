@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "purpose": "development_only_hen_v2_campuran",
+  "seed": 42,
+  "manifest": "data/crops_hen_campur/manifest.csv",
+  "manifest_sha256": "a4056dc3c0c160131454d171bc2966fcf536079b0f070d126130da02d297b464",
+  "builder": "src/build_crops_hen.py",
+  "builder_sha256": "2c17f4c5a350ec9c8f514fbe3b163d7ff457f6b5f5db6dbe19c41d06e76e8fb9",
+  "hen_mode": "campuran",
+  "hen_ambang_korelasi": 0.97,
+  "counts": {
+    "train": {
+      "alive": 76,
+      "dead": 44,
+      "total": 120
+    },
+    "val": {
+      "alive": 50,
+      "dead": 33,
+      "total": 83
+    }
+  },
+  "n_base_images": 36,
+  "base_image_to_split": {
+    "hen_f0022": "train",
+    "hen_f0047": "train",
+    "hen_f0058": "train",
+    "hen_f0067": "train",
+    "hen_f0069": "train",
+    "hen_f0070": "val",
+    "hen_f0077": "train",
+    "hen_f0078": "train",
+    "hen_f0108": "val",
+    "hen_f0119": "val",
+    "hen_f0156": "val",
+    "hen_f0219": "val",
+    "hen_f0285": "val",
+    "hen_f0287": "train",
+    "hen_f0296": "train",
+    "hen_f0310": "train",
+    "hen_f0391": "val",
+    "hen_f0400": "train",
+    "hen_f0413": "train",
+    "hen_f0414": "val",
+    "hen_f0417": "val",
+    "hen_f0422": "train",
+    "hen_f0424": "val",
+    "hen_f0433": "train",
+    "hen_f0435": "train",
+    "hen_f0446": "val",
+    "hen_f0461": "val",
+    "hen_f0480": "val",
+    "hen_f0788": "val",
+    "hen_f0813": "train",
+    "hen_f0906": "val",
+    "hen_f0928": "val",
+    "hen_f0947": "val",
+    "hen_f0954": "train",
+    "hen_f0976": "train",
+    "hen_f1013": "val"
+  },
+  "test_dataset_excluded": "C:/Arib/CCTV/patnet-pure/dataset/chick"
+}

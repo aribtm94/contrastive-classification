@@ -1,0 +1,68 @@
+{
+  "crops": "data/crops_hen_campur",
+  "features": {
+    "ketajaman": {
+      "threshold": 159.56310476813897,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.6423444976076556,
+      "val_bacc": 0.593939393939394,
+      "val_auc_raw": 0.5327272727272727,
+      "val_auc": 0.5327272727272727
+    },
+    "rasio_bbox": {
+      "threshold": 1.380281690140845,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.5956937799043063,
+      "val_bacc": 0.49363636363636365,
+      "val_auc_raw": 0.4657575757575758,
+      "val_auc": 0.5342424242424242
+    },
+    "saturasi": {
+      "threshold": 50.435865752551024,
+      "sign": 1,
+      "from_pixels": true,
+      "train_bacc": 0.6465311004784688,
+      "val_bacc": 0.7136363636363636,
+      "val_auc_raw": 0.7436363636363635,
+      "val_auc": 0.7436363636363635
+    },
+    "terang": {
+      "threshold": 150.65900031887756,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.5944976076555024,
+      "val_bacc": 0.47333333333333333,
+      "val_auc_raw": 0.5012121212121212,
+      "val_auc": 0.5012121212121212
+    },
+    "hue": {
+      "threshold": 15.739477040816327,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.631578947368421,
+      "val_bacc": 0.6387878787878788,
+      "val_auc_raw": 0.36787878787878786,
+      "val_auc": 0.6321212121212121
+    },
+    "std_terang": {
+      "threshold": 43.16140114139649,
+      "sign": -1,
+      "from_pixels": true,
+      "train_bacc": 0.6172248803827751,
+      "val_bacc": 0.5575757575757576,
+      "val_auc_raw": 0.3993939393939394,
+      "val_auc": 0.6006060606060606
+    },
+    "ukuran_bbox": {
+      "threshold": 40.0,
+      "sign": 1,
+      "from_pixels": false,
+      "train_bacc": 0.7033492822966507,
+      "val_bacc": 0.59,
+      "val_auc_raw": 0.5851515151515152,
+      "val_auc": 0.5851515151515152
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "total": 2000,
+  "per_split": {
+    "train": {
+      "mati": 297,
+      "hidup": 852
+    },
+    "val": {
+      "mati": 203,
+      "hidup": 648
+    }
+  },
+  "foto_per_split": {
+    "train": 602,
+    "val": 432
+  },
+  "expected_counts": {
+    "train": {
+      "alive": 852,
+      "dead": 297,
+      "total": 1149
+    },
+    "val": {
+      "alive": 648,
+      "dead": 203,
+      "total": 851
+    }
+  },
+  "dibuang": {
+    "1": 10,
+    "frame_tanpa_anotasi": 5,
+    "box_kecil_hidup": 245,
+    "hidup_dipangkas_seimbang": 2216
+  }
+}

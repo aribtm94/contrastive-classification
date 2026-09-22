@@ -460,8 +460,18 @@ def validate_development_manifest(cfg: dict) -> dict:
     protocol = cfg.get("protocol", {})
     if not protocol.get("development_only"):
         return {}
-    if cfg["crops"].get("alive_source") != "pio":
-        raise ValueError("protokol development hanya menerima alive_source=pio")
+    # Sumber ayam hidup yang boleh dipakai, dideklarasikan PER CONFIG.
+    # Bawaan {"pio"} dipilih supaya empat config lama (config_pio_dev,
+    # config_pio_eq_dev, config_pio_dev2, config_pio_eq_dev2) tidak berubah
+    # satu baris pun dan tetap ditolak kalau sumber hidupnya digeser diam-diam.
+    # Susunan dengan sumber hidup lain - misalnya crop hidup dari frame HEN v2
+    # yang sama dengan crop matinya - WAJIB mendaftarkannya eksplisit lewat
+    # protocol.allowed_alive_source di config-nya sendiri.
+    izin_hidup = {str(x) for x in (protocol.get("allowed_alive_source") or ["pio"])}
+    if cfg["crops"].get("alive_source") not in izin_hidup:
+        raise ValueError(
+            f"alive_source tidak terdaftar di protocol.allowed_alive_source: "
+            f"{cfg['crops'].get('alive_source')} (izin: {sorted(izin_hidup)})")
 
     path = resolve(cfg["crops"]["manifest"])
     lock_path = resolve(protocol["split_lock"])

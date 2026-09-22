@@ -1,0 +1,355 @@
+# =============================================================================
+# LENGAN HEN v2 - frame campur, resolusi disamakan (eq48)
+#
+#   hidup : HEN v2, kelas Healthy/healthy/Healthly   origin hen_gt / hen_kandang
+#   mati  : HEN v2, kelas Dead/Dead_chicken          origin hen_gt / hen_kandang
+#
+# KENAPA SATU ORIGIN, BUKAN DUA. Permintaannya "latih dari HEN v2 + coco_gt,
+# buang archive4_rgb". Terukur sebelum menulis config ini: SELURUH 36 foto
+# sumber coco_gt punya kembaran di antara 429 foto ber-Dead HEN v2 - MAE
+# thumbnail < 1.0 untuk semuanya, 13 pasang tepat 0.000. Namanya beda hanya
+# pada tanda hubung ganda ("image--26-" vs "image-26-"), itu sebabnya irisan
+# nama naif memberi nol. Jadi "HEN v2 + coco_gt" secara aritmetika = HEN v2
+# saja, dan config ini memakai SATU origin. Yang hilang bukan data, melainkan
+# nama ganda yang menyesatkan; konflik split ikut hilang di akarnya (tanpa
+# pelipatan: 6 foto coco_gt-train tapi HEN-valid, 12 coco_gt-val tapi
+# HEN-train, 3 lainnya menyeberang).
+#
+# KONSEKUENSI YANG WAJIB IKUT DILAPORKAN: lengan ini punya SATU sumber ayam
+# mati, bukan dua. Klaim "dua domain mati" dari config_pio_dev2.yaml TIDAK
+# berlaku lagi setelah archive4_rgb dibuang.
+#
+# KENAPA domain SAMA UNTUK KEDUA KELAS. Kolom domain di sini "hen_kandang"
+# untuk mati maupun hidup. Pada percobaan terdahulu label ternyata bisa
+# dibaca dari domain (latih dengan PIO -> bacc 1.0 palsu, karena label =
+# dataset asal). Dengan kedua kelas dari satu kandang dan satu kamera,
+# "label = domain" mustahil secara konstruksi - bukan sekadar diharapkan.
+#
+# SUSUNAN: frame campur saja (paling ketat)
+# Hanya frame yang memuat kedua kelas sekaligus. TERUKUR pada build ini:
+# 86 berkas = 36 FOTO unik -> 44+33=77 crop mati / 126 hidup, total 203.
+# Kecil, dan itu harganya.
+#
+# KOREKSI ANGKA LANTAI. Rencana memilih susunan ini karena lantainya 0.6903
+# (saturasi) - "satu-satunya susunan HEN di bawah 0.70". Angka itu dari
+# populasi PROBE sebelum split per foto. Dijalankan pada split yang benar-benar
+# dipakai (eval_shortcut_baseline atas data/crops_hen_campur), lantainya
+# saturasi val AUC-terarah 0.7436, BUKAN 0.6903. Alasan "di bawah 0.70" karena
+# itu tidak berlaku lagi. Susunan ini tetap dipakai, tapi sebagai susunan
+# paling ketat yang tersedia - bukan sebagai susunan berlantai rendah.
+# Rincian val AUC-terarah: saturasi 0.7436, hue 0.6321, std_terang 0.6006,
+# ukuran_bbox 0.5852, rasio 0.5342, ketajaman 0.5327, terang 0.5012.
+# Pembanding yang tetap ditolak: HEN mati vs PIO hidup, ketajaman 0.9706.
+#
+# Confound resolusi (416,416)=100% mati TIDAK berlaku di sini: nol frame campur
+# berukuran itu. Sebarannya 320x320=50, 640x640=22, 608x608=14, dan ketiganya
+# berisi dua kelas. Dicatat supaya tidak ada yang mengutip confound itu untuk
+# lengan ini.
+#
+# SPLIT BAWAAN ZIP TIDAK DIPAKAI. Terukur: 3929 frame beranotasi hanya berisi
+# 1034 FOTO unik, dan 526 di antaranya tersebar lintas split train/valid/test
+# bawaan Roboflow. Pemeriksaan hash EKSAK atas thumbnail tidak bisa melihat
+# ini - Roboflow mengekspor ulang foto yang sama pada 320/608/640 px sehingga
+# byte-nya berbeda walau fotonya identik. Kunci grup yang dipakai adalah
+# gabungan stem Roboflow DAN korelasi piksel 32x32 >= 0.97, disatukan
+# union-find. Stem SAJA menyisakan 1070 kelompok: 465 pasangan kembar punya
+# stem berbeda, dan cabang korelasi yang menutupnya. Ambang 0.97 dipertahankan
+# bukan karena ada celah di sebaran - pada pasangan dalam-stem sebarannya
+# MENERUS - melainkan karena hasilnya tak sensitif (0.97 -> 1034 foto,
+# 0.99 -> 1040, 0.995 -> 1048) dan arah galatnya over-merge, yang biayanya
+# granularitas split, bukan kebocoran.
+#
+# VARIAN EQ48. Berkas ini pasangan configs/config_hen_campur.yaml; satu-
+# satunya perbedaan di antara keduanya adalah crops.equalize_resolution.
+#
+#   python src/build_crops_hen.py --config configs/config_hen_campur_eq.yaml
+#   python src/eval_shortcut_baseline.py --crops data/crops_hen_campur_eq \
+#       --json outputs/predictions_hen/hen_hen_campur_eq_shortcut.json  # GERBANG
+#   python src/train.py --config configs/config_hen_campur_eq.yaml --method all \
+#       --seeds 42,43,44 --save-model all
+# =============================================================================
+
+seed: 42
+device: auto            # auto | cuda | cpu
+
+# Kontrak eksperimen: training tidak boleh membaca dataset chick.
+protocol:
+  development_only: true
+  # DIISI DARI KELUARAN build_crops_hen.py, bukan dikarang lebih dulu, dan
+  # SUDAH terisi - jangan dikosongkan lagi. Angka di bawah dibaca dari jalan
+  # pertama; jalan-jalan berikutnya WAJIB melaporkan "split lock: cocok",
+  # bukan membangunnya ulang. Kalau ia membangun ulang alih-alih mencocokkan,
+  # ada nondeterminisme di pembangun crop dan seluruh angka lengan ini
+  # berhenti bisa dipercaya.
+  #
+  # Empat config, dua susunan, dan SELISIH dua susunan itu yang jadi
+  # pengukuran - bukan salah satunya sendiri:
+  #     campur[_eq]   36 foto    120 train /  83 val
+  #     semua[_eq]  1034 foto   1149 train / 851 val
+  # Pasangan _eq ber-angka IDENTIK dengan non-_eq, dan itu memang harus:
+  # equalize mengubah PIKSEL, tidak mengubah baris mana yang lolos. Kalau
+  # suatu saat keduanya beda, equalize menyentuh penyaringan dan itu bug -
+  # bukan varian baru. Komposisi di balik angka ini (pangkas hidup,
+  # min_box_size, lantai per susunan) ada di kepala berkas ini, satu tempat.
+  # Dijaga tests/test_protocol.py::test_manifest_hen_terkunci.
+  expected_counts: {"train": {"alive": 76, "dead": 44, "total": 120}, "val": {"alive": 50, "dead": 33, "total": 83}}
+  split_lock: "data/crops_hen_campur_eq/dev_split_lock.json"
+  history_csv: "outputs/reports_hen_campur_eq/hen_campur_eq_history.csv"
+  registry: "outputs/predictions_hen/hen_campur_eq_registry.json"
+  shortcut_json: "outputs/predictions_hen/hen_campur_eq_shortcut.json"
+  validation_seed_offset: 900001
+
+  # Sumber ayam hidup yang boleh dipakai. Tanpa kunci ini
+  # dataset.validate_development_manifest memakai bawaannya, "pio", dan akan
+  # MENOLAK lengan ini - perilaku yang benar untuk empat config lama, dan
+  # sengaja dipertahankan di sana.
+  allowed_alive_source: [hen_campuran]
+
+  # Pasangan (origin, domain) yang boleh muncul di manifest, per label.
+  # Keduanya sama persis: itu inti susunan ini, bukan salah tulis.
+  allowed_provenance:
+    alive:
+      - [hen_gt, hen_kandang]
+    dead:
+      - [hen_gt, hen_kandang]
+
+# Tidak ada blok `detection:` di lengan ini. Kedua kelas dianotasi manusia di
+# dalam zip HEN v2, jadi tidak ada tahap deteksi yang bisa dijalankan atau
+# dievaluasi - beda dari config_pio_dev2.yaml yang crop hidupnya hasil YOLO.
+
+# --- Tahap 2: Ekstraksi crop untuk classifier ------------------------------
+crops:
+  hen_zip: "data/ayam mati no paper/HEN v2.v1i.coco.zip"
+
+  # campuran = HANYA frame yang memuat ayam mati DAN hidup sekaligus.
+  # semua    = semua frame beranotasi.
+  hen_mode: campuran
+
+  # Ambang korelasi piksel 32x32 untuk memutuskan dua frame adalah satu FOTO.
+  # Berada di dalam CELAH TERUKUR pada zip ini: pasangan kembar 0.947-0.9999,
+  # pasangan tak berkaitan sekitar -0.02, dan tidak ada apa pun di antara 0.05
+  # dan 0.94. Nilai mana pun di dalam celah memberi kelompok yang sama; angka
+  # ini bukan tebakan. Skrip mencetak pasangan termerge-terlemah dan
+  # tak-termerge-terkuat setiap kali jalan supaya celahnya bisa diaudit mata.
+  hen_ambang_korelasi: 0.97
+
+  # Satu crop per objek per FOTO, bukan per berkas. Tanpa ini foto yang
+  # diekspor ulang 2-5x menyumbang crop berkali-kali, dan bobot foto itu
+  # dalam skor jadi berlipat tanpa alasan.
+  hen_dedup_ekspor_ulang: true
+
+  out_dir: "data/crops_hen_campur_eq"
+  manifest: "data/crops_hen_campur_eq/manifest.csv"
+
+  # Crop ayam hidup datang dari anotasi HEN v2 yang sama, bukan dari PIO.
+  alive_source: hen_campuran
+
+  # Samakan resolusi efektif kedua kelas SEBELUM di-letterbox ke 224.
+  # DINYALAKAN di lengan ini. Peringatan dari percobaan terdahulu tetap
+  # berlaku: equalize TIDAK selalu mematikan jalan pintas ketajaman, ia bisa
+  # MEMBALIK arahnya, tergantung rasio sisi pendek antar sumber. Karena di
+  # sini kedua kelas berasal dari kamera yang sama, efek yang diharapkan
+  # adalah pada jalan pintas UKURAN (sisi_pendek), bukan ketajaman.
+  equalize_resolution:
+    enabled: true
+    target_short_side: 96
+
+  bbox_padding: 0.10    # margin konteks di sekitar bbox (10%)
+
+  # 12, BUKAN 16 seperti config lama. Terukur pada frame campur: ambang 16
+  # membuang 8 crop HIDUP dan NOL crop mati. Filter yang memangkas satu kelas
+  # saja sama dengan memasang jalan pintas ukuran dengan tangan sendiri -
+  # persis yang sedang diukur lengan ini.
+  min_box_size: 12
+
+  # Rasio maksimum hidup:mati agar kelas tidak terlalu timpang.
+  max_alive_per_dead: 3.0
+
+  # Split per FOTO, bukan per crop dan bukan per berkas. Selain augmentasi
+  # Roboflow, zip ini memuat ekspor ulang multi-resolusi dari foto yang sama.
+  split_by_base_image: true
+  split_names: [train, val]
+  split_ratio: [0.6, 0.4]         # development saja; test = dataset chick
+
+  save_review_grid: false
+
+# --- Tahap 3: Klasifikasi kontrastif ---------------------------------------
+classifier:
+  image_size: 224           # BATAS INPUT: 224x224 (ketentuan)
+  resize_mode: letterbox    # letterbox (jaga rasio aspek) | resize (paksa)
+
+  backbone: resnet18
+  pretrained: true
+  feature_dim: 512          # dimensi output resnet18
+  proj_dim: 128             # dimensi embedding kontrastif
+  proj_hidden: 512
+
+  batch_size: 32
+  num_workers: 0            # 0 = paling aman di Windows
+  temperature: 0.07
+
+  # Tahap kontrastif (metode A & B)
+  epochs_contrastive: 60
+  lr_contrastive: 0.0005
+
+  # Linear probe (encoder dibekukan, hanya kepala klasifikasi dilatih)
+  epochs_probe: 40
+  lr_probe: 0.001
+
+  # Klasifikasi biasa (metode C)
+  epochs_ce: 60
+  lr_ce: 0.0001
+
+  weight_decay: 0.0001
+  class_weighting: true     # tangani ketimpangan hidup vs mati
+
+  # Bobot cross-entropy yang digabung ke SupCon (metode B).
+  # 0.0 = SupCon murni; > 0 = SupCon + CE dilatih bersamaan.
+  supcon_ce_weight: 0.0
+
+  early_stop_patience: 15
+
+
+# --- Augmentasi per metode -------------------------------------------------
+# Tiap metode memakai kebijakan augmentasi dari SATU paper yang berbeda.
+#
+# PERINGATAN ILMIAH: karena augmentasinya berbeda-beda, membandingkan ketiga
+# metode pada DIAGONAL (selfcon+simclr vs supcon+stacked_randaug vs
+# ce+hier_addone) TIDAK lagi mengisolasi fungsi loss - yang berubah dua hal
+# sekaligus. Jalankan `python src/train.py --grid full` sekali sebagai
+# kontrol: kolomnya (augmentasi ditahan, loss divariasikan) memulihkan
+# perbandingan metode yang sah. Lihat outputs/reports/augmentation_report.md.
+#
+# TIDAK ADA ROTASI di kebijakan mana pun, walaupun ketiga paper memakainya.
+# Orientasi (tergeletak vs berdiri tegak) adalah sinyal nyata yang
+# membedakan mati dan hidup di dataset ini; memutar gambar menghapusnya.
+augmentation:
+  by_method:
+    selfcon: {contrastive: simclr,          head: minimal}
+    supcon:  {contrastive: stacked_randaug, head: minimal}
+    ce:      {contrastive: null,            head: hier_addone}
+
+  # Kunci tahap linear probe ke 'minimal' untuk selfcon/supcon.
+  # Alasan: probe mengukur kualitas ENCODER. Kalau augmentasi probe ikut
+  # berbeda per metode, angkanya mencampur dua efek sekaligus. Khosla dkk.
+  # mengukur ini: silang pretrain-aug x probe-aug menggeser top-1 > 3 poin.
+  # Metode 'ce' terpaksa berbeda - tahap kepala adalah satu-satunya tahap
+  # latihnya; asimetri ini ditulis terang-terangan di laporan.
+  lock_probe_policy: true
+
+  # Pengaturan gambar contoh di src/aug_report.py
+  preview_views: 6
+  preview_samples: 4          # 2 hidup + 2 mati
+
+  policies:
+    none:
+      ops: []
+
+    # == perilaku lama augment(strong=False): flip saja ==
+    minimal:
+      ops:
+        - {op: hflip, p: 0.5}
+
+    # == perilaku lama augment(strong=True), disimpan sebagai pembanding ==
+    # Blur k=3/5 di sini TERLALU LEMAH: AUC ketajaman masih 0.851.
+    legacy:
+      ops:
+        - {op: hflip,           p: 0.5}
+        - {op: rrc_iso,         p: 0.7, scale: [0.70, 1.00]}
+        - {op: bright_contrast, p: 0.8, alpha: [0.7, 1.3], beta: [-30, 30]}
+        - {op: hsv,             p: 0.5, sat: [0.6, 1.4], hue: [-8, 8]}
+        - {op: gray,            p: 0.2}
+        - {op: blur,            p: 0.3, kernel: [3, 5]}
+
+    # ---- A. SimCLR - Chen dkk., ICML 2020, Appendix A ------------------
+    # Urutan paper: crop -> flip -> distorsi warna -> grayscale -> blur.
+    # Gambar 5 paper: crop + distorsi warna adalah pasangan TERKUAT
+    # (+23.2 poin di atas crop saja), karena warna/tekstur mentah harus
+    # dimatikan supaya encoder tidak menghafal histogram warna.
+    # Blur kernel = 10% sisi gambar = 23 px pada 224 - jauh lebih kuat
+    # daripada k=3/5 versi lama, dan itulah yang langsung menyerang
+    # jalan pintas ketajaman (lihat laporan).
+    simclr:
+      ops:
+        - {op: rrc,          p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333]}
+        - {op: hflip,        p: 0.5}
+        - {op: color_jitter, p: 0.8, strength: 1.0}
+        - {op: gray,         p: 0.2}
+        - {op: blur,         p: 0.5, kernel_frac: 0.10, sigma: [0.1, 2.0]}
+
+    # ---- B. Stacked RandAugment - Khosla dkk., NeurIPS 2020 -------------
+    # Paper SupCon TIDAK mendefinisikan augmentasinya sendiri; ia
+    # membandingkan AutoAugment / RandAugment / SimAugment / Stacked
+    # RandAugment, dan yang terakhir terbaik untuk ResNet dalam.
+    # "Stacked" = rangkaian 2 op dijalankan DUA KALI berurutan.
+    # SENGAJA TANPA Gaussian blur (blur bukan bagian RandAugment), supaya
+    # kontras blur-vs-tanpa-blur terlihat jelas di tabel kebocoran.
+    # Rotate/ShearX/ShearY dibuang dari kolam op -> lihat catatan di atas.
+    stacked_randaug:
+      ops:
+        - {op: rrc,     p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333]}
+        - {op: hflip,   p: 0.5}
+        - {op: randaug, p: 1.0, n: 2, magnitude: 9, stacked: true}
+
+    # ---- C. Zhang & Ma, CVPR 2022 - modul augmentasi "add-one" ----------
+    # t0 = crop (selalu), lalu t1..t4 = warna, grayscale, blur, flip PERSIS
+    # urutan paper (urutan ini yang menang: 67.1 vs 64.5 untuk urutan
+    # terburuk). level_sampling meniru "expanded views": tiap sampel
+    # memakai subset T_i dengan i ~ U{1..4}, jadi sebagian pasangan cuma
+    # beda crop+warna (invariansi lemah) dan sebagian beda penuh.
+    #
+    # TIDAK diimplementasikan: loss multi-stage 4-tap, 8 view, dan
+    # augmentation-parameter embedding. Ketiganya mengubah ARSITEKTUR,
+    # sedangkan syarat perbandingan ini adalah arsitektur identik.
+    # Laporan wajib menyebut batasan ini - menyebutnya "metode Zhang"
+    # tanpa catatan itu klaim yang tidak benar.
+    hier_addone:
+      level_sampling: true
+      ops:
+        - {op: rrc,          p: 1.0, scale: [0.20, 1.00], ratio: [0.75, 1.3333], level: 0}
+        - {op: color_jitter, p: 0.8, strength: 1.0, level: 1}
+        - {op: gray,         p: 0.2, level: 2}
+        - {op: blur,         p: 0.5, kernel_frac: 0.10, sigma: [0.1, 2.0], level: 3}
+        - {op: hflip,        p: 0.5, level: 4}
+
+# --- Output ----------------------------------------------------------------
+# Tiap lengan punya reports_dir SENDIRI. Sebabnya bukan kerapian: train.py
+# memaku nama "development_comparison.json" dan menulisnya ke reports_dir,
+# sehingga dua lengan yang berbagi direktori akan saling menimpa. Itu sudah
+# pernah terjadi - lihat outputs/reports/domain_mati_kedua.md bagian 4h, di
+# mana lengan hanya bisa dibedakan lewat validation.n. Keempat config HEN
+# karena itu wajib berbeda di sini.
+output:
+  runs_dir: "outputs/runs_hen_campur_eq"
+  reports_dir: "outputs/reports_hen_campur_eq"
+  predictions_dir: "outputs/predictions_hen"
+
+# --- Laporan ---------------------------------------------------------------
+report:
+  istilah:
+    judul: "Ayam Mati vs Hidup (HEN v2 - frame campur saja (paling ketat))"
+    positif: "ayam MATI"
+    pos: "mati"
+    neg: "hidup"
+    pos_panjang: "ayam mati"
+    neg_panjang: "ayam hidup"
+    sebab_lantai: "saturasi warna"
+    # Diperiksa SETELAH jalan, tidak diasumsikan. Pada data ayam terdahulu val
+    # AUC jenuh di 1.0000 sejak epoch 1-2; di lengan ini kedua kelas berasal
+    # dari kamera yang sama sehingga tugasnya lebih sulit dan belum tentu
+    # jenuh. Ubah ke true hanya kalau keluarannya memang menunjukkan itu.
+    val_jenuh: false
+
+  # Ciri kandidat untuk LANTAI laporan. WAJIB ada: tanpa daftar ini report.py
+  # memakai ketajaman saja dengan arah dipaku +1, dan di lengan campuran
+  # ketajaman memang ciri paling LEMAH - val AUC-terarah 0.5327, praktis nol
+  # informasi - sementara SATURASI yang mengikat di 0.7436. Memakai ketajaman
+  # di sini sama dengan menurunkan palang ujiannya sendiri.
+  # Ciri dipilih dari skor TRAIN, tidak pernah test.
+  lantai_ciri: [ketajaman, saturasi, terang, hue, std_terang]
+
+# Tiga metode yang dibandingkan (lihat src/train.py)
+methods:
+  selfcon: "Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe"
+  supcon:  "Supervised Contrastive - label hidup & mati digabung dalam loss"
+  ce:      "Klasifikasi biasa (Cross-Entropy) - baseline"

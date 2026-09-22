@@ -1,0 +1,595 @@
+{
+  "schema_version": 1,
+  "experiment": "pio_roboflow_development",
+  "test_policy": "fixed_retrospective_chick_test_only",
+  "data_contract": {
+    "alive": "PIO/pio_gt/cctv",
+    "dead": "Roboflow/coco_gt/closeup",
+    "train_validation_only": true,
+    "label_equals_domain_limitation": true,
+    "test_root": "C:/Arib/CCTV/patnet-pure/dataset/chick",
+    "test_counts": {
+      "total": 1215,
+      "dead": 22,
+      "alive": 921,
+      "bukan": 272,
+      "frames": 18
+    }
+  },
+  "config": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\configs\\config_hen_semua.yaml",
+  "config_sha256": "2179cc956629553f1d712959511c29439779f686c473fbf26d07ddaebf277d44",
+  "config_snapshot": {
+    "seed": 42,
+    "device": "auto",
+    "protocol": {
+      "development_only": true,
+      "expected_counts": {
+        "train": {
+          "alive": 852,
+          "dead": 297,
+          "total": 1149
+        },
+        "val": {
+          "alive": 648,
+          "dead": 203,
+          "total": 851
+        }
+      },
+      "split_lock": "data/crops_hen_semua/dev_split_lock.json",
+      "history_csv": "outputs/reports_hen_semua/hen_semua_history.csv",
+      "registry": "outputs/predictions_hen/hen_semua_registry.json",
+      "shortcut_json": "outputs/predictions_hen/hen_semua_shortcut.json",
+      "validation_seed_offset": 900001,
+      "allowed_alive_source": [
+        "hen_semua"
+      ],
+      "allowed_provenance": {
+        "alive": [
+          [
+            "hen_gt",
+            "hen_kandang"
+          ]
+        ],
+        "dead": [
+          [
+            "hen_gt",
+            "hen_kandang"
+          ]
+        ]
+      }
+    },
+    "crops": {
+      "hen_zip": "data/ayam mati no paper/HEN v2.v1i.coco.zip",
+      "hen_mode": "semua",
+      "hen_ambang_korelasi": 0.97,
+      "hen_dedup_ekspor_ulang": true,
+      "out_dir": "data/crops_hen_semua",
+      "manifest": "data/crops_hen_semua/manifest.csv",
+      "alive_source": "hen_semua",
+      "equalize_resolution": {
+        "enabled": false,
+        "target_short_side": 96
+      },
+      "bbox_padding": 0.1,
+      "min_box_size": 12,
+      "max_alive_per_dead": 3.0,
+      "split_by_base_image": true,
+      "split_names": [
+        "train",
+        "val"
+      ],
+      "split_ratio": [
+        0.6,
+        0.4
+      ],
+      "save_review_grid": false
+    },
+    "classifier": {
+      "image_size": 224,
+      "resize_mode": "letterbox",
+      "backbone": "resnet18",
+      "pretrained": true,
+      "feature_dim": 512,
+      "proj_dim": 128,
+      "proj_hidden": 512,
+      "batch_size": 32,
+      "num_workers": 0,
+      "temperature": 0.07,
+      "epochs_contrastive": 60,
+      "lr_contrastive": 0.0005,
+      "epochs_probe": 40,
+      "lr_probe": 0.001,
+      "epochs_ce": 60,
+      "lr_ce": 0.0001,
+      "weight_decay": 0.0001,
+      "class_weighting": true,
+      "supcon_ce_weight": 0.0,
+      "early_stop_patience": 15
+    },
+    "augmentation": {
+      "by_method": {
+        "selfcon": {
+          "contrastive": "simclr",
+          "head": "minimal"
+        },
+        "supcon": {
+          "contrastive": "stacked_randaug",
+          "head": "minimal"
+        },
+        "ce": {
+          "contrastive": null,
+          "head": "hier_addone"
+        }
+      },
+      "lock_probe_policy": true,
+      "preview_views": 6,
+      "preview_samples": 4,
+      "policies": {
+        "none": {
+          "ops": []
+        },
+        "minimal": {
+          "ops": [
+            {
+              "op": "hflip",
+              "p": 0.5
+            }
+          ]
+        },
+        "legacy": {
+          "ops": [
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "rrc_iso",
+              "p": 0.7,
+              "scale": [
+                0.7,
+                1.0
+              ]
+            },
+            {
+              "op": "bright_contrast",
+              "p": 0.8,
+              "alpha": [
+                0.7,
+                1.3
+              ],
+              "beta": [
+                -30,
+                30
+              ]
+            },
+            {
+              "op": "hsv",
+              "p": 0.5,
+              "sat": [
+                0.6,
+                1.4
+              ],
+              "hue": [
+                -8,
+                8
+              ]
+            },
+            {
+              "op": "gray",
+              "p": 0.2
+            },
+            {
+              "op": "blur",
+              "p": 0.3,
+              "kernel": [
+                3,
+                5
+              ]
+            }
+          ]
+        },
+        "simclr": {
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ]
+            },
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "color_jitter",
+              "p": 0.8,
+              "strength": 1.0
+            },
+            {
+              "op": "gray",
+              "p": 0.2
+            },
+            {
+              "op": "blur",
+              "p": 0.5,
+              "kernel_frac": 0.1,
+              "sigma": [
+                0.1,
+                2.0
+              ]
+            }
+          ]
+        },
+        "stacked_randaug": {
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ]
+            },
+            {
+              "op": "hflip",
+              "p": 0.5
+            },
+            {
+              "op": "randaug",
+              "p": 1.0,
+              "n": 2,
+              "magnitude": 9,
+              "stacked": true
+            }
+          ]
+        },
+        "hier_addone": {
+          "level_sampling": true,
+          "ops": [
+            {
+              "op": "rrc",
+              "p": 1.0,
+              "scale": [
+                0.2,
+                1.0
+              ],
+              "ratio": [
+                0.75,
+                1.3333
+              ],
+              "level": 0
+            },
+            {
+              "op": "color_jitter",
+              "p": 0.8,
+              "strength": 1.0,
+              "level": 1
+            },
+            {
+              "op": "gray",
+              "p": 0.2,
+              "level": 2
+            },
+            {
+              "op": "blur",
+              "p": 0.5,
+              "kernel_frac": 0.1,
+              "sigma": [
+                0.1,
+                2.0
+              ],
+              "level": 3
+            },
+            {
+              "op": "hflip",
+              "p": 0.5,
+              "level": 4
+            }
+          ]
+        }
+      }
+    },
+    "output": {
+      "runs_dir": "outputs/runs_hen_semua",
+      "reports_dir": "outputs/reports_hen_semua",
+      "predictions_dir": "outputs/predictions_hen"
+    },
+    "report": {
+      "istilah": {
+        "judul": "Ayam Mati vs Hidup (HEN v2 - semua frame beranotasi (pembanding))",
+        "positif": "ayam MATI",
+        "pos": "mati",
+        "neg": "hidup",
+        "pos_panjang": "ayam mati",
+        "neg_panjang": "ayam hidup",
+        "sebab_lantai": "ketajaman/resolusi",
+        "val_jenuh": false
+      },
+      "lantai_ciri": [
+        "ketajaman",
+        "saturasi",
+        "terang",
+        "hue",
+        "std_terang"
+      ]
+    },
+    "methods": {
+      "selfcon": "Self-Contrastive (NT-Xent/SimCLR) - tanpa label, lalu linear probe",
+      "supcon": "Supervised Contrastive - label hidup & mati digabung dalam loss",
+      "ce": "Klasifikasi biasa (Cross-Entropy) - baseline"
+    }
+  },
+  "manifest": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\data\\crops_hen_semua\\manifest.csv",
+  "manifest_sha256": "c03acd576d65a2a43e463694862592d3a22f46627cf673017f9f0000922e6eb2",
+  "split_lock": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\data\\crops_hen_semua\\dev_split_lock.json",
+  "split_lock_sha256": "cbc404a087d315d9469cb60173a997f5af2bde24df7b91a0615a121f1dad17cd",
+  "shortcut_baseline": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\predictions_hen\\hen_semua_shortcut.json",
+  "shortcut_baseline_sha256": "e4ffa8f9f570e3f4cdc1fdbb77237f8de1a31edcf449a60ae2bda153c0ce17de",
+  "runtime": {
+    "python": "3.10.6",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "torch": "2.1.2+cu121",
+    "torchvision": "0.16.2+cu121",
+    "cuda_runtime": "12.1",
+    "cudnn": 8801,
+    "device": "cuda",
+    "device_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "git_commit": "3fdb1f89040d0362ba9fde650693c0f5bbac15fd",
+    "git_dirty": true
+  },
+  "source_sha256": {
+    "src/train.py": "3d32495e73b870b74df24f4a071095c7c669ddaefb337f8ccd90ebce00843af7",
+    "src/dataset.py": "48d5bec38da74d45d34886826dfbbdc6a0e1a6a2f1ca7a85cf984b60f062b24c",
+    "src/models.py": "ebdd5a240110f859aa80f93ce14ee7c16012af2a68bbb5730ca37162935b9fb9",
+    "src/common.py": "32b3c7fe07b12a182d7854e4674b925ec0751458db6549b4c8b1944d07d68b77",
+    "src/build_crops.py": "7f8f8504ba97bc6a33407a6b6180f0b11774b465a85964024cb4c8e443969543",
+    "src/intervensi.py": "f59e38f6933490e95cfcde85ff0d4701149ff9a1b6756bead57c92b7c92e648f",
+    "src/eval_same_frame.py": "9a1e10dd4fd66d95854708cde5fc86e813e2fa4e81dd04715923235eb4c46c3a",
+    "src/eval_fixed_chick.py": "7bc68cc46849c4a18f22c2151d3d7a6716dba50c2fdc9921a63907ead848fa5a",
+    "src/report_loss.py": "60b2751d78d05e64796a37bb495e7e3b0e4d0caf1d48d1b4dc0a9ddf8256c310",
+    "src/report_fixed_chick.py": "b931deca628d03d517a34112613b813d035f72aa45a6a5a576758e838514cd24"
+  },
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "primary_relative_scorer": "feature512_median_loo",
+  "checkpoints": [
+    {
+      "run_id": "ce__hier_addone__s42",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\ce__hier_addone__s42\\model.pt",
+      "checkpoint_sha256": "73169abce013ec6e2b90acac2e9088bccb066b386d86bfca322b890766d52480",
+      "threshold_from_validation": 0.5395728349685669,
+      "validation": {
+        "accuracy": 0.9612,
+        "balanced_accuracy": 0.9576,
+        "precision_dead": 0.8935,
+        "recall_dead": 0.9507,
+        "recall_alive": 0.9645,
+        "f1_dead": 0.9212,
+        "tp": 193,
+        "tn": 625,
+        "fp": 23,
+        "fn": 10,
+        "n": 851,
+        "roc_auc": 0.9871,
+        "epoch": 15,
+        "val_loss": 0.14005765155702243
+      }
+    },
+    {
+      "run_id": "ce__hier_addone__s43",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\ce__hier_addone__s43\\model.pt",
+      "checkpoint_sha256": "3f253a7d1fe594a75230d3d220c3b91a514abe1b94a0fc01a2c9bab6f5d13156",
+      "threshold_from_validation": 0.39438796043395996,
+      "validation": {
+        "accuracy": 0.9624,
+        "balanced_accuracy": 0.9533,
+        "precision_dead": 0.9091,
+        "recall_dead": 0.936,
+        "recall_alive": 0.9707,
+        "f1_dead": 0.9223,
+        "tp": 190,
+        "tn": 629,
+        "fp": 19,
+        "fn": 13,
+        "n": 851,
+        "roc_auc": 0.9825,
+        "epoch": 18,
+        "val_loss": 0.17866932257628512
+      }
+    },
+    {
+      "run_id": "ce__hier_addone__s44",
+      "method": "ce",
+      "augmentation": "hier_addone",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\ce__hier_addone__s44\\model.pt",
+      "checkpoint_sha256": "4418136b456c000fbfa851e64fce43f324ffc103c96b3e2929bd905c40f62439",
+      "threshold_from_validation": 0.5324929356575012,
+      "validation": {
+        "accuracy": 0.9589,
+        "balanced_accuracy": 0.9493,
+        "precision_dead": 0.9,
+        "recall_dead": 0.931,
+        "recall_alive": 0.9676,
+        "f1_dead": 0.9153,
+        "tp": 189,
+        "tn": 627,
+        "fp": 21,
+        "fn": 14,
+        "n": 851,
+        "roc_auc": 0.9866,
+        "epoch": 34,
+        "val_loss": 0.17978391495585283
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s42",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\selfcon__simclr__s42\\model.pt",
+      "checkpoint_sha256": "6bf9f80ab7b978db76996f335e3273fec46d911a8bebb6cc85d97f49ef1da3f3",
+      "threshold_from_validation": 0.5019412040710449,
+      "validation": {
+        "accuracy": 0.9283,
+        "balanced_accuracy": 0.9276,
+        "precision_dead": 0.8034,
+        "recall_dead": 0.9261,
+        "recall_alive": 0.929,
+        "f1_dead": 0.8604,
+        "tp": 188,
+        "tn": 602,
+        "fp": 46,
+        "fn": 15,
+        "n": 851,
+        "roc_auc": 0.9731,
+        "epoch": 17,
+        "val_loss": 0.20563616123513054
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s43",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\selfcon__simclr__s43\\model.pt",
+      "checkpoint_sha256": "f4594b27313765e3ced51bf03c1920fbfbb55219caea2e20c25f5793f4bb7ee6",
+      "threshold_from_validation": 0.5375559329986572,
+      "validation": {
+        "accuracy": 0.9424,
+        "balanced_accuracy": 0.9351,
+        "precision_dead": 0.85,
+        "recall_dead": 0.9212,
+        "recall_alive": 0.9491,
+        "f1_dead": 0.8842,
+        "tp": 187,
+        "tn": 615,
+        "fp": 33,
+        "fn": 16,
+        "n": 851,
+        "roc_auc": 0.97,
+        "epoch": 27,
+        "val_loss": 0.21203939140194908
+      }
+    },
+    {
+      "run_id": "selfcon__simclr__s44",
+      "method": "selfcon",
+      "augmentation": "simclr",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\selfcon__simclr__s44\\model.pt",
+      "checkpoint_sha256": "ecc7aec6262cdbbbf5ef0593331710de8c618ff2d0151ff1a965329f2f2ef28c",
+      "threshold_from_validation": 0.5022221207618713,
+      "validation": {
+        "accuracy": 0.9307,
+        "balanced_accuracy": 0.9291,
+        "precision_dead": 0.8103,
+        "recall_dead": 0.9261,
+        "recall_alive": 0.9321,
+        "f1_dead": 0.8644,
+        "tp": 188,
+        "tn": 604,
+        "fp": 44,
+        "fn": 15,
+        "n": 851,
+        "roc_auc": 0.9714,
+        "epoch": 21,
+        "val_loss": 0.21331150398276735
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s42",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 42,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\supcon__stacked_randaug__s42\\model.pt",
+      "checkpoint_sha256": "17dbceb279e76b8e1a8add524620d7d9b77f85c370a13cb1898868a0d2008490",
+      "threshold_from_validation": 0.2938355803489685,
+      "validation": {
+        "accuracy": 0.9565,
+        "balanced_accuracy": 0.9325,
+        "precision_dead": 0.9278,
+        "recall_dead": 0.8867,
+        "recall_alive": 0.9784,
+        "f1_dead": 0.9068,
+        "tp": 180,
+        "tn": 634,
+        "fp": 14,
+        "fn": 23,
+        "n": 851,
+        "roc_auc": 0.9744,
+        "epoch": 3,
+        "val_loss": 0.26308892874493567
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s43",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 43,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\supcon__stacked_randaug__s43\\model.pt",
+      "checkpoint_sha256": "c602706bbeed34414cb7068e26b7de1f2b7c67106750964669248770119c0f16",
+      "threshold_from_validation": 0.32804059982299805,
+      "validation": {
+        "accuracy": 0.9624,
+        "balanced_accuracy": 0.9415,
+        "precision_dead": 0.9385,
+        "recall_dead": 0.9015,
+        "recall_alive": 0.9815,
+        "f1_dead": 0.9196,
+        "tp": 183,
+        "tn": 636,
+        "fp": 12,
+        "fn": 20,
+        "n": 851,
+        "roc_auc": 0.9783,
+        "epoch": 11,
+        "val_loss": 0.28407579648083053
+      }
+    },
+    {
+      "run_id": "supcon__stacked_randaug__s44",
+      "method": "supcon",
+      "augmentation": "stacked_randaug",
+      "seed": 44,
+      "checkpoint": "C:\\Arib\\MASSA AYAM\\chicken detection + constrative classification\\outputs\\runs_hen_semua\\supcon__stacked_randaug__s44\\model.pt",
+      "checkpoint_sha256": "7dc62a46b1846036751b69b2889e4b8559b059b501610c7ab6363a6c24a3d8a2",
+      "threshold_from_validation": 0.4385245144367218,
+      "validation": {
+        "accuracy": 0.9636,
+        "balanced_accuracy": 0.9524,
+        "precision_dead": 0.9175,
+        "recall_dead": 0.931,
+        "recall_alive": 0.9738,
+        "f1_dead": 0.9242,
+        "tp": 189,
+        "tn": 631,
+        "fp": 17,
+        "fn": 14,
+        "n": 851,
+        "roc_auc": 0.9809,
+        "epoch": 18,
+        "val_loss": 0.2743890947649388
+      }
+    }
+  ]
+}

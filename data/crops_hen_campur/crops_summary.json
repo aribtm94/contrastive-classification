@@ -1,0 +1,33 @@
+{
+  "total": 203,
+  "per_split": {
+    "train": {
+      "hidup": 76,
+      "mati": 44
+    },
+    "val": {
+      "hidup": 50,
+      "mati": 33
+    }
+  },
+  "foto_per_split": {
+    "train": 18,
+    "val": 18
+  },
+  "expected_counts": {
+    "train": {
+      "alive": 76,
+      "dead": 44,
+      "total": 120
+    },
+    "val": {
+      "alive": 50,
+      "dead": 33,
+      "total": 83
+    }
+  },
+  "dibuang": {
+    "1": 10,
+    "frame_tanpa_anotasi": 5
+  }
+}
