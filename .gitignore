@@ -75,7 +75,7 @@ data/crops_pio_dev/dead/
 data/crops_pio_eq_dev/alive/
 data/crops_pio_eq_dev/dead/
 
-# Worktree agent Claude Code (bukan bagian hasil)
+# Direktori kerja agen (bukan bagian hasil)
 .claude/
 
 # ------------------------------------------------------------
@@ -104,10 +104,52 @@ data/crops_pio_dev2_eq/dead/
 outputs/runs_pio_dev2/
 outputs/runs_pio_dev2_eq/
 
-# Hitung manual tahap klasifikasi (docs/hitung_manual_klasifikasi.md dan
-# alat bantunya). Seluruh contoh angkanya memakai susunan lama data/crops/
-# (130 crop, lantai ketajaman bacc 0.9231), jadi tidak boleh dikutip sebagai
-# hasil. Nilainya sebagai bahan ajar, bukan sebagai catatan percobaan.
-docs/
-results/
-scripts/
+# ------------------------------------------------------------
+# docs/, results/, scripts/ SEKARANG DILACAK.
+#
+# Isinya hitung manual I-X (docs/hitung_manual_klasifikasi.md) beserta dua
+# skrip pengukurnya dan JSON keluarannya. Seluruh contoh angkanya memakai
+# susunan lama data/crops/ - 130 crop, lantai ketajaman bacc 0.9231 - jadi
+# TIDAK BOLEH dikutip sebagai hasil percobaan mana pun. Nilainya sebagai
+# bahan ajar: memperlihatkan aritmetika tiap tahap pada data nyata.
+# Peringatan yang sama tertulis di kepala dokumennya sendiri.
+#
+# Berkas sementara/scratch di AKAR repo, bukan bagian hasil. Dijangkarkan
+# dengan "/" supaya outputs/tambalan/_acuan/ yang sudah dilacak tidak ikut.
+# ------------------------------------------------------------
+/_*
+
+# ------------------------------------------------------------
+# Lengan HEN (ayam) dan KolektorSDD2 (non-ayam).
+#
+# Aturannya sama dengan lengan-lengan sebelumnya: gambar dan bobot
+# dibangun ulang, sedangkan manifest.csv / crops_summary.json /
+# dev_split_lock.json tetap dilacak karena itulah yang mengunci
+# protokol dan memungkinkan orang lain memeriksa susunan splitnya.
+# Hasilkan ulang: src/build_crops_hen.py, src/build_crops_kolektor.py,
+# src/build_yolo_kolektor.py, src/train_detect_kolektor.py
+# ------------------------------------------------------------
+data/crops_hen_campur/hidup/
+data/crops_hen_campur/mati/
+data/crops_hen_campur_eq/hidup/
+data/crops_hen_campur_eq/mati/
+data/crops_hen_semua/hidup/
+data/crops_hen_semua/mati/
+data/crops_hen_semua_eq/hidup/
+data/crops_hen_semua_eq/mati/
+data/crops_kolektor_gt/train/
+data/crops_kolektor_gt/val/
+data/crops_kolektor_gt/test/
+data/crops_kolektor_deteksi/train/
+data/crops_kolektor_deteksi/val/
+data/crops_kolektor_deteksi/test/
+outputs/runs_hen_campur/
+outputs/runs_hen_campur_eq/
+outputs/runs_hen_semua/
+outputs/runs_hen_semua_eq/
+outputs/runs_kolektor/
+
+# Dataset sumber KolektorSDD2 (820 MB) + turunan YOLO-nya (61 MB).
+# Lisensi pihak ketiga, tidak disebarkan ulang lewat repo ini.
+data/kolektor2/
+data/kolektor2_yolo/

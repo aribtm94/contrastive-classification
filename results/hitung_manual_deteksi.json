@@ -1,0 +1,194 @@
+{
+  "detect_imgsz": 640,
+  "detect_conf": 0.25,
+  "detect_iou_nms": 0.7,
+  "detect_max_det": 300,
+  "classifier_image_size": 224,
+  "bbox_padding": 0.1,
+  "min_box_size": 16,
+  "alive_min_conf": 0.25,
+  "alive_min_box": 48,
+  "alive_max_iou_with_dead": 0.01,
+  "alive_detector_class": 14,
+  "alive_detector_imgsz": 640,
+  "beda_dengan_pio": {
+    "imgsz": {
+      "pio": 960,
+      "repo_ini": 640
+    },
+    "nms_iou": {
+      "pio": 0.45,
+      "repo_ini": 0.7
+    },
+    "conf_floor": {
+      "pio": 0.05,
+      "repo_ini": 0.25
+    },
+    "ukuran_gambar_asal": {
+      "pio": "1080x1920",
+      "repo_ini": "432x432 / 400x400"
+    },
+    "kelas_lewat_detektor": {
+      "pio": "semua objek",
+      "repo_ini": "hanya kelas HIDUP; kelas MATI dari bbox anotasi"
+    }
+  },
+  "deteksi_sumber": "C:\\Arib\\CCTV\\patnet-pure\\dataset\\chick\\images",
+  "deteksi_n_gambar": 18,
+  "deteksi_n_box": 1215,
+  "deteksi_conf_dipakai": 0.25,
+  "deteksi_imgsz_dipakai": 640,
+  "ukuran_gambar_unik": [
+    [
+      400,
+      400
+    ],
+    [
+      432,
+      432
+    ]
+  ],
+  "letterbox_deteksi": {
+    "400x400": {
+      "r": 1.6,
+      "nh_nw": [
+        640,
+        640
+      ],
+      "pad_atas_bawah": 0.0,
+      "pad_kiri_kanan": 0.0,
+      "interpolasi": "INTER_LINEAR"
+    },
+    "432x432": {
+      "r": 1.481481,
+      "nh_nw": [
+        640,
+        640
+      ],
+      "pad_atas_bawah": 0.0,
+      "pad_kiri_kanan": 0.0,
+      "interpolasi": "INTER_LINEAR"
+    }
+  },
+  "conf_min_max": [
+    0.2511,
+    0.9085
+  ],
+  "conf_median": 0.8215,
+  "box_per_gambar": {
+    "min": 37,
+    "maks": 114,
+    "median": 68.5
+  },
+  "sisi_pendek_box_ruang_asal": {
+    "min": 4.35,
+    "maks": 79.61,
+    "median": 38.65
+  },
+  "sisi_pendek_box_ruang_imgsz_median": 57.2593,
+  "contoh_gambar": {
+    "nama": "ayam (1).jpg",
+    "W": 432,
+    "H": 432
+  },
+  "contoh_box_bbox": [
+    215.25,
+    174.33,
+    264.77,
+    217.35
+  ],
+  "contoh_box_conf": 0.8953,
+  "contoh_box_wh": [
+    49.52,
+    43.02
+  ],
+  "contoh_box_di_ruang_imgsz": [
+    318.8889,
+    258.2667,
+    392.2519,
+    322.0
+  ],
+  "contoh_iou_tertinggi_antar_box_tersisa": {
+    "iou": 0.694782,
+    "box_a": [
+      0.82,
+      198.34,
+      83.04,
+      253.23
+    ],
+    "box_b": [
+      7.38,
+      211.22,
+      82.18,
+      253.36
+    ],
+    "catatan": "keduanya SELAMAT dari NMS, jadi IoU-nya di bawah ambang 0.7 - ini batas bawah, bukan contoh penekanan"
+  },
+  "crop_per_origin": {
+    "bird_det__alive": 32,
+    "coco_gt__dead": 98
+  },
+  "crop_total": 130,
+  "conf_kelas_mati_unik": [
+    1.0
+  ],
+  "sisi_pendek_bbox_per_kelas": {
+    "alive": {
+      "n": 32,
+      "median_sisi_pendek": 83.4
+    },
+    "dead": {
+      "n": 98,
+      "median_sisi_pendek": 212.25
+    }
+  },
+  "crops_summary_skipped": {
+    "hidup_kena_ayam_mati": 56,
+    "hidup_terlalu_kecil": 5
+  },
+  "crops_summary_stats": {
+    "train": {
+      "alive": 20,
+      "dead": 55,
+      "total": 75
+    },
+    "val": {
+      "alive": 5,
+      "dead": 17,
+      "total": 22
+    },
+    "test": {
+      "alive": 7,
+      "dead": 26,
+      "total": 33
+    }
+  },
+  "padbox_contoh_crop": "dead/dead_train_image--10-_16_00.jpg",
+  "padbox_contoh_bbox": [
+    36,
+    124,
+    416,
+    336.5
+  ],
+  "padbox_contoh_src": "image--10-_jpg.rf.0fc7ca9f0632e93027f98bd739ccbe66.jpg",
+  "padbox_contoh_WH": [
+    416,
+    416
+  ],
+  "padbox_hasil": [
+    0,
+    103,
+    416,
+    358
+  ],
+  "padbox_delta_wh": [
+    38.0,
+    21.25
+  ],
+  "padbox_tanpa_jepit": [
+    -2.0,
+    102.75,
+    454.0,
+    357.75
+  ]
+}

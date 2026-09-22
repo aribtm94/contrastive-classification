@@ -1,0 +1,955 @@
+{
+  "n_split": {
+    "train": {
+      "hidup": 20,
+      "mati": 55,
+      "total": 75
+    },
+    "val": {
+      "hidup": 5,
+      "mati": 17,
+      "total": 22
+    },
+    "test": {
+      "hidup": 7,
+      "mati": 26,
+      "total": 33
+    }
+  },
+  "n_total": 130,
+  "contoh_mati": {
+    "path": "dead/dead_train_image--10-_16_00.jpg",
+    "label": 1,
+    "split": "test",
+    "base_image": "image--10-",
+    "src_file": "image--10-_jpg.rf.0fc7ca9f0632e93027f98bd739ccbe66.jpg",
+    "bbox": "[36, 124, 416, 336.5]",
+    "conf": "1.0",
+    "origin": "coco_gt",
+    "domain": "closeup"
+  },
+  "contoh_hidup": {
+    "path": "alive/alive_train_image--10-_18_001.jpg",
+    "label": 0,
+    "split": "test",
+    "base_image": "image--10-",
+    "src_file": "image--10-_jpg.rf.068c1ec717821c9ebe4cb93adb888544.jpg",
+    "bbox": "[226.3, 0.2, 356.3, 49.2]",
+    "conf": "0.4403",
+    "origin": "bird_det",
+    "domain": "closeup"
+  },
+  "pad_ratio": 0.1,
+  "src_img_mati": "C:\\Arib\\MASSA AYAM\\Pretrained method vs trained objek\\repro\\data\\dead-chikens\\train\\image--10-_jpg.rf.0fc7ca9f0632e93027f98bd739ccbe66.jpg",
+  "src_img_HW": [
+    416,
+    416
+  ],
+  "bbox_asli": [
+    36,
+    124,
+    416,
+    336.5
+  ],
+  "bbox_wh": [
+    380,
+    212.5
+  ],
+  "pad_dw_dh": [
+    38.0,
+    21.25
+  ],
+  "bbox_padded_float": [
+    0.0,
+    102.75,
+    416.0,
+    357.75
+  ],
+  "bbox_padded_int": [
+    0,
+    103,
+    416,
+    358
+  ],
+  "bbox_padded_wh": [
+    416,
+    255
+  ],
+  "crop_shape": [
+    255,
+    416,
+    3
+  ],
+  "lb_scale": 0.538462,
+  "lb_nh_nw": [
+    137,
+    224
+  ],
+  "lb_top_left": [
+    43,
+    0
+  ],
+  "lb_bottom_right_pad": [
+    44,
+    0
+  ],
+  "lb_interp": "INTER_AREA",
+  "lb_pad_fraction": 0.388393,
+  "lb_pad_color": [
+    114,
+    114,
+    114
+  ],
+  "lb_out_shape": [
+    224,
+    224,
+    3
+  ],
+  "lb_cek_piksel_pojok": [
+    114,
+    114,
+    114
+  ],
+  "crop_disk_shape": [
+    224,
+    224,
+    3
+  ],
+  "imagenet_mean": [
+    0.48500001430511475,
+    0.4560000002384186,
+    0.4059999883174896
+  ],
+  "imagenet_std": [
+    0.2290000021457672,
+    0.2240000069141388,
+    0.22499999403953552
+  ],
+  "piksel_yx": [
+    112,
+    112
+  ],
+  "piksel_bgr_uint8": [
+    126,
+    136,
+    136
+  ],
+  "piksel_rgb_uint8": [
+    136,
+    136,
+    126
+  ],
+  "piksel_01": [
+    0.533333,
+    0.533333,
+    0.494118
+  ],
+  "piksel_imagenet": [
+    0.211063,
+    0.345238,
+    0.391634
+  ],
+  "tensor_shape": [
+    3,
+    224,
+    224
+  ],
+  "tensor_cek_piksel": [
+    0.211063,
+    0.345238,
+    0.391634
+  ],
+  "tensor_min_max": [
+    -2.117904,
+    1.646536
+  ],
+  "piksel_bantalan114_imagenet": [
+    -0.165682,
+    -0.039916,
+    0.182484
+  ],
+  "vlap_contoh_mati": 1036.4452,
+  "vlap_contoh_hidup": 119.1782,
+  "policy_simclr": [
+    {
+      "op": "rrc",
+      "p": 1.0,
+      "scale": [
+        0.2,
+        1.0
+      ],
+      "ratio": [
+        0.75,
+        1.3333
+      ]
+    },
+    {
+      "op": "hflip",
+      "p": 0.5
+    },
+    {
+      "op": "color_jitter",
+      "p": 0.8,
+      "strength": 1.0
+    },
+    {
+      "op": "gray",
+      "p": 0.2
+    },
+    {
+      "op": "blur",
+      "p": 0.5,
+      "kernel_frac": 0.1,
+      "sigma": [
+        0.1,
+        2.0
+      ]
+    }
+  ],
+  "policy_by_method": {
+    "selfcon": {
+      "contrastive": "simclr",
+      "head": "minimal"
+    },
+    "supcon": {
+      "contrastive": "stacked_randaug",
+      "head": "minimal"
+    },
+    "ce": {
+      "contrastive": null,
+      "head": "hier_addone"
+    }
+  },
+  "seed_dasar": 42,
+  "seed_j1_j2": [
+    0,
+    104729
+  ],
+  "seed_view1": 42000126,
+  "seed_view2": 42104855,
+  "aug_view1_ops": [
+    "rrc0.83"
+  ],
+  "aug_view2_ops": [
+    "rrc0.48",
+    "hflip",
+    "color1.0",
+    "blur23"
+  ],
+  "vlap_view1": 374.0048,
+  "vlap_view2": 17.4685,
+  "blur_kernel_frac_224": 23,
+  "checkpoint": "outputs/runs/selfcon/model.pt",
+  "checkpoint_meta": [
+    "selfcon",
+    "simclr",
+    42
+  ],
+  "arsitektur": {
+    "backbone": "resnet18",
+    "feat_dim": 512,
+    "proj_hidden": 512,
+    "proj_dim": 128
+  },
+  "jumlah_parameter": {
+    "total": 11506882,
+    "backbone": 11176512,
+    "projector": 329344,
+    "classifier": 1026
+  },
+  "feat_shape": [
+    2,
+    512
+  ],
+  "feat_mati_5": [
+    0.613887,
+    0.0,
+    1.338272,
+    1.262139,
+    1.520847
+  ],
+  "feat_hidup_5": [
+    0.74036,
+    0.029555,
+    2.014408,
+    1.818386,
+    0.408593
+  ],
+  "feat_mati_norm": 25.51655,
+  "feat_nol_persen": 0.0098,
+  "conv1_bentuk_bobot": [
+    64,
+    3,
+    7,
+    7
+  ],
+  "conv1_stride_padding": [
+    [
+      2,
+      2
+    ],
+    [
+      3,
+      3
+    ]
+  ],
+  "conv1_posisi_keluaran": [
+    56,
+    56
+  ],
+  "conv1_jendela_asal_yx": [
+    109,
+    109
+  ],
+  "conv1_patch_R_baris0": [
+    0.4166,
+    0.3994,
+    0.3481,
+    0.4508,
+    0.3823,
+    0.3823,
+    0.2967
+  ],
+  "conv1_kernel0_R_baris0": [
+    -0.0102,
+    -0.0067,
+    -0.0037,
+    0.0727,
+    0.0544,
+    0.0155,
+    -0.014
+  ],
+  "conv1_sum_per_kanal": [
+    0.164148,
+    0.193869,
+    0.058953
+  ],
+  "conv1_z_manual": 0.416969,
+  "conv1_z_pytorch": 0.41697,
+  "bn1_param": {
+    "mu": 0.009958,
+    "var": 0.304421,
+    "gamma": 0.238157,
+    "beta": 0.223719,
+    "eps": 1e-05
+  },
+  "bn1_zhat": 0.73767,
+  "bn1_y": 0.3994,
+  "relu_out": 0.3994,
+  "proj_W1_shape": [
+    512,
+    512
+  ],
+  "proj_W2_shape": [
+    128,
+    512
+  ],
+  "proj_h1_0": -0.311772,
+  "proj_h1_0_manual": -0.311772,
+  "proj_bn_param": {
+    "mu": -0.202979,
+    "var": 0.323459,
+    "gamma": 1.000749,
+    "beta": -0.001091,
+    "eps": 1e-05
+  },
+  "proj_h1_0_setelah_bn": -0.192522,
+  "proj_h1_0_setelah_relu": 0.0,
+  "proj_h2_prenorm_5": [
+    0.014798,
+    -0.209008,
+    0.231027,
+    -0.938677,
+    0.465558
+  ],
+  "proj_h2_norm": 5.746755,
+  "z_mati_5": [
+    0.002575,
+    -0.03637,
+    0.040201,
+    -0.16334,
+    0.081012
+  ],
+  "z_hidup_5": [
+    -0.022922,
+    -0.065207,
+    0.098077,
+    -0.262587,
+    0.093499
+  ],
+  "z_mati_norm": 1.0,
+  "z_hidup_norm": 1.0,
+  "cos_mati_hidup": 0.640474,
+  "batch_contoh_path": [
+    "dead/dead_test_image--1-_3_00.jpg",
+    "dead/dead_test_image--17-_1_00.jpg",
+    "alive/alive_train_image--42-_19_000.jpg",
+    "alive/alive_train_image--42-_19_001.jpg"
+  ],
+  "batch_contoh_label": [
+    1,
+    1,
+    0,
+    0
+  ],
+  "batch_seed_view1": [
+    42000126,
+    42000127,
+    42000128,
+    42000129
+  ],
+  "batch_seed_view2": [
+    42104855,
+    42104856,
+    42104857,
+    42104858
+  ],
+  "batch_ops_view1": [
+    [
+      "rrc0.83"
+    ],
+    [
+      "rrc0.72",
+      "color1.0"
+    ],
+    [
+      "rrc0.80",
+      "blur23"
+    ],
+    [
+      "rrc0.77",
+      "hflip",
+      "blur23"
+    ]
+  ],
+  "batch_ops_view2": [
+    [
+      "rrc0.48",
+      "hflip",
+      "color1.0",
+      "blur23"
+    ],
+    [
+      "rrc0.48",
+      "color1.0"
+    ],
+    [
+      "rrc0.62",
+      "color1.0",
+      "gray",
+      "blur23"
+    ],
+    [
+      "rrc0.44",
+      "hflip",
+      "color1.0",
+      "blur23"
+    ]
+  ],
+  "temperature": 0.07,
+  "N_batch_contoh": 4,
+  "batch_size_asli": 32,
+  "matriks_cos": [
+    [
+      1.0,
+      0.1091,
+      0.0307,
+      -0.0655,
+      0.9551,
+      0.0547,
+      0.0673,
+      -0.0101
+    ],
+    [
+      0.1091,
+      1.0,
+      -0.0789,
+      0.0458,
+      0.0533,
+      0.9544,
+      -0.0936,
+      -0.089
+    ],
+    [
+      0.0307,
+      -0.0789,
+      1.0,
+      0.3374,
+      0.1299,
+      -0.045,
+      0.9703,
+      0.2959
+    ],
+    [
+      -0.0655,
+      0.0458,
+      0.3374,
+      1.0,
+      -0.008,
+      0.0049,
+      0.2638,
+      0.8601
+    ],
+    [
+      0.9551,
+      0.0533,
+      0.1299,
+      -0.008,
+      1.0,
+      0.0079,
+      0.1649,
+      0.0609
+    ],
+    [
+      0.0547,
+      0.9544,
+      -0.045,
+      0.0049,
+      0.0079,
+      1.0,
+      -0.0713,
+      -0.0904
+    ],
+    [
+      0.0673,
+      -0.0936,
+      0.9703,
+      0.2638,
+      0.1649,
+      -0.0713,
+      1.0,
+      0.2634
+    ],
+    [
+      -0.0101,
+      -0.089,
+      0.2959,
+      0.8601,
+      0.0609,
+      -0.0904,
+      0.2634,
+      1.0
+    ]
+  ],
+  "matriks_sim_dibagi_T": [
+    [
+      14.2857,
+      1.5589,
+      0.4379,
+      -0.9362,
+      13.6449,
+      0.7817,
+      0.9616,
+      -0.1448
+    ],
+    [
+      1.5589,
+      14.2857,
+      -1.1274,
+      0.6546,
+      0.7618,
+      13.6347,
+      -1.3369,
+      -1.2707
+    ],
+    [
+      0.4379,
+      -1.1274,
+      14.2857,
+      4.8206,
+      1.8562,
+      -0.6434,
+      13.8618,
+      4.2276
+    ],
+    [
+      -0.9362,
+      0.6546,
+      4.8206,
+      14.2857,
+      -0.1146,
+      0.0696,
+      3.769,
+      12.2877
+    ],
+    [
+      13.6449,
+      0.7618,
+      1.8562,
+      -0.1146,
+      14.2857,
+      0.1124,
+      2.356,
+      0.8704
+    ],
+    [
+      0.7817,
+      13.6347,
+      -0.6434,
+      0.0696,
+      0.1124,
+      14.2857,
+      -1.0181,
+      -1.291
+    ],
+    [
+      0.9616,
+      -1.3369,
+      13.8618,
+      3.769,
+      2.356,
+      -1.0181,
+      14.2857,
+      3.763
+    ],
+    [
+      -0.1448,
+      -1.2707,
+      4.2276,
+      12.2877,
+      0.8704,
+      -1.291,
+      3.763,
+      14.2857
+    ]
+  ],
+  "nt_xent_loss": 0.000209,
+  "supcon_loss": 7.255452,
+  "ntxent_b0_indeks_positif": 4,
+  "ntxent_b0_sim_positif": 13.644885,
+  "ntxent_b0_logsumexp": 13.644899,
+  "ntxent_b0_loss": 1.4e-05,
+  "ntxent_b0_negatif_count": 6,
+  "ntxent_semua_baris_loss": [
+    1.4e-05,
+    1.1e-05,
+    0.000193,
+    0.000791,
+    2.8e-05,
+    7e-06,
+    9.5e-05,
+    0.000532
+  ],
+  "supcon_label_2N": [
+    1,
+    1,
+    0,
+    0,
+    1,
+    1,
+    0,
+    0
+  ],
+  "supcon_b0_n_positif": 3,
+  "supcon_b0_indeks_positif": [
+    1,
+    4,
+    5
+  ],
+  "supcon_b0_logprob_positif": [
+    -12.085989,
+    -1.5e-05,
+    -12.863218
+  ],
+  "supcon_b0_loss": 8.316407,
+  "supcon_semua_baris_loss": [
+    8.316407,
+    8.31622,
+    6.2253,
+    5.329352,
+    8.805205,
+    8.791747,
+    6.7306,
+    5.528783
+  ],
+  "n_train_hidup_mati": [
+    20,
+    55
+  ],
+  "class_weight": [
+    1.875,
+    0.681818
+  ],
+  "ce_logit": [
+    [
+      -1.667866,
+      1.308713
+    ],
+    [
+      -0.530303,
+      0.819705
+    ],
+    [
+      1.34979,
+      -1.100927
+    ],
+    [
+      1.278947,
+      -1.402608
+    ]
+  ],
+  "ce_per_sampel": [
+    0.049711,
+    0.230507,
+    0.082715,
+    0.066215
+  ],
+  "ce_bobot_per_sampel": [
+    0.681818,
+    0.681818,
+    1.875,
+    1.875
+  ],
+  "ce_pembilang": 0.470301,
+  "ce_penyebut": 5.113636,
+  "ce_loss_berbobot": 0.09197,
+  "ce_loss_tanpa_bobot": 0.107287,
+  "classifier_W_shape": [
+    2,
+    512
+  ],
+  "logit_mati": [
+    0.127201,
+    0.846548
+  ],
+  "logit_hidup": [
+    0.861968,
+    -0.303586
+  ],
+  "logit_mati_kelas1_manual": 0.846548,
+  "softmax_mati": [
+    0.327537,
+    0.672463
+  ],
+  "softmax_hidup": [
+    0.76234,
+    0.23766
+  ],
+  "softmax_mati_manual": 0.672463,
+  "selisih_logit_mati": 0.719347,
+  "sigmoid_selisih_mati": 0.672463,
+  "val_n": 22,
+  "val_y_true": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "val_y_score": [
+    0.22,
+    0.4847,
+    0.4961,
+    0.2358,
+    0.4888,
+    0.549,
+    0.8311,
+    0.8611,
+    0.8487,
+    0.6045,
+    0.6834,
+    0.6534,
+    0.8253,
+    0.8139,
+    0.8531,
+    0.6787,
+    0.6113,
+    0.6041,
+    0.8012,
+    0.8755,
+    0.8691,
+    0.7213
+  ],
+  "test_n": 33,
+  "test_y_true": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+  ],
+  "test_y_score": [
+    0.2377,
+    0.3689,
+    0.2689,
+    0.4562,
+    0.6724,
+    0.4339,
+    0.4811,
+    0.6722,
+    0.697,
+    0.7319,
+    0.8543,
+    0.824,
+    0.784,
+    0.5972,
+    0.5334,
+    0.7662,
+    0.8032,
+    0.7679,
+    0.8245,
+    0.7204,
+    0.7426,
+    0.7855,
+    0.5573,
+    0.7404,
+    0.794,
+    0.6319,
+    0.7845,
+    0.8126,
+    0.541,
+    0.7009,
+    0.6882,
+    0.8367,
+    0.8776
+  ],
+  "test_n_mati_hidup": [
+    26,
+    7
+  ],
+  "test_metrik_05": {
+    "accuracy": 0.9697,
+    "balanced_accuracy": 0.9286,
+    "precision_dead": 0.963,
+    "recall_dead": 1.0,
+    "recall_alive": 0.8571,
+    "f1_dead": 0.9811,
+    "tp": 26,
+    "tn": 6,
+    "fp": 1,
+    "fn": 0,
+    "n": 33,
+    "roc_auc": 0.967
+  },
+  "ambang_dari_val": 0.522575,
+  "test_metrik_ambang": {
+    "accuracy": 0.9697,
+    "balanced_accuracy": 0.9286,
+    "precision_dead": 0.963,
+    "recall_dead": 1.0,
+    "recall_alive": 0.8571,
+    "f1_dead": 0.9811,
+    "tp": 26,
+    "tn": 6,
+    "fp": 1,
+    "fn": 0,
+    "n": 33,
+    "roc_auc": 0.967
+  },
+  "val_skor_unik_n": 22,
+  "val_kandidat_n": 23,
+  "val_bacc_maks": 1.0,
+  "val_dataran_n_kelompok": 1,
+  "val_dataran_kelompok": [
+    {
+      "i0": 5,
+      "i1": 5,
+      "n": 1,
+      "t0": 0.522575,
+      "t1": 0.522575,
+      "lebar": 0.0
+    }
+  ],
+  "val_dataran_terlebar_tengah": 0.522575,
+  "auc_fungsi": 0.967033,
+  "auc_n_pasangan": 182,
+  "auc_pasangan_salah_urut": 6.0,
+  "auc_dari_pasangan": 0.967033,
+  "skor_min_mati": 0.533434,
+  "skor_maks_hidup": 0.672439,
+  "hasil_diagonal": {
+    "selfcon": {
+      "aug": "simclr",
+      "val_bacc": 1.0,
+      "val_auc": 1.0,
+      "test_bacc": 0.9286,
+      "test_auc": 0.967,
+      "test_tp_tn_fp_fn": [
+        26,
+        6,
+        1,
+        0
+      ],
+      "ambang": 0.522575,
+      "test_tuned_bacc": 0.9286,
+      "detik": 61.0
+    },
+    "supcon": {
+      "aug": "stacked_randaug",
+      "val_bacc": 0.8529,
+      "val_auc": 0.9294,
+      "test_bacc": 0.7857,
+      "test_auc": 0.8901,
+      "test_tp_tn_fp_fn": [
+        26,
+        4,
+        3,
+        0
+      ],
+      "ambang": 0.469091,
+      "test_tuned_bacc": 0.7143,
+      "detik": 65.5
+    },
+    "ce": {
+      "aug": "hier_addone",
+      "val_bacc": 1.0,
+      "val_auc": 1.0,
+      "test_bacc": 0.9093,
+      "test_auc": 0.9341,
+      "test_tp_tn_fp_fn": [
+        25,
+        6,
+        1,
+        1
+      ],
+      "ambang": 0.304448,
+      "test_tuned_bacc": 0.9286,
+      "detik": 13.8
+    }
+  }
+}
