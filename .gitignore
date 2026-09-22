@@ -103,3 +103,11 @@ data/crops_pio_dev2_eq/alive/
 data/crops_pio_dev2_eq/dead/
 outputs/runs_pio_dev2/
 outputs/runs_pio_dev2_eq/
+
+# Hitung manual tahap klasifikasi (docs/hitung_manual_klasifikasi.md dan
+# alat bantunya). Seluruh contoh angkanya memakai susunan lama data/crops/
+# (130 crop, lantai ketajaman bacc 0.9231), jadi tidak boleh dikutip sebagai
+# hasil. Nilainya sebagai bahan ajar, bukan sebagai catatan percobaan.
+docs/
+results/
+scripts/
